@@ -4,6 +4,11 @@ The project will also explore the use of topological information in the form of 
 
 Supervised by: Raghavendra Selvan  
 
+## Random thoughts
+Attention is analogous to a fully-adjacent graph layer, therefore it is a special case of a GNN.
+Therefore, it should be possible to find some trade-off between losing computing efficiency and performance.
+
+
 <!--
 This might need to be moved to its own file or compiled to LaTeX
 -->
