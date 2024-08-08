@@ -23,6 +23,7 @@ This was a source suggested by Raghav.
 ## [Leave Graphs Alone: Addressing Over-Squashing without Rewiring](https://openreview.net/forum?id=vEbUaN9Z2V8)
 
 ## [Understanding Oversquashing in GNNs through the Lens of Effective Resistance](https://arxiv.org/pdf/2302.06835)
+The authors found out that over-squashing is a different problem from "under-reaching", which is that the network isn't large enough to be able to make a node reach another node. They also reproduce the results of adding a FA making all GNNs better. They found out that the number of edges added from the FA also correlates with a reduction in errors even if it isn't the entire layer. Hidden sizes are much less relevant than just adding the FA.
 
 ## [Hierarchical Graph Representation Learning with Differentiable Pooling](https://proceedings.neurips.cc/paper_files/paper/2018/file/e77dbaf6759253c7c6d0efc5690369c7-Paper.pdf)
 
