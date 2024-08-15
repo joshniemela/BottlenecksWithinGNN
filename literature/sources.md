@@ -1,4 +1,7 @@
 # Potentially Useful Sources
+## [Universal Graph Neural Networks without Message Passing](https://openreview.net/forum?id=P0bfBJaD4KP)
+## [Non-convolutional Graph Neural Networks](https://arxiv.org/abs/2408.00165)
+## [On Over-Squashing in Message Passing Neural Networks: The Impact of Width, Depth, and Topology] (https://arxiv.org/abs/2302.02941)
 ## [Topological Deep Learning](https://tdlbook.org/introduction)
 This is a useful book about TDL
 
