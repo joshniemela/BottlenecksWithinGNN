@@ -1,4 +1,6 @@
 # Potentially Useful Sources
+## [Topological Deep Learning](https://tdlbook.org/introduction)
+This is a useful book about TDL
 
 ## [Position: Topological Deep Learning is the New Frontier for Relational Learning](https://arxiv.org/pdf/2402.08871)
 This is a meta-analysis of the field of topological deep learning. It is a good starting point for understanding the field.  
