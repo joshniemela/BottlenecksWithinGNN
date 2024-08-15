@@ -8,6 +8,13 @@ Supervised by: Raghavendra Selvan
 Attention is analogous to a fully-adjacent graph layer, therefore it is a special case of a GNN.
 Therefore, it should be possible to find some trade-off between losing computing efficiency and performance.
 
+Jacobians and stuff show that node to node insensitivity is equivalent to oversquashing and we coudl use this to measure insensitivity in a TDL graph
+
+Learnable topological representaiton.
+measuring distances between relevant nodes.
+
+replacing transformer attentoin with tdl based network
+
 
 <!--
 This might need to be moved to its own file or compiled to LaTeX
