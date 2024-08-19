@@ -4,6 +4,11 @@ on:
     paths:
       - ".github/workflows/latex_ci.yml"
       - "report/**"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_latex:
     runs-on: ubuntu-latest
