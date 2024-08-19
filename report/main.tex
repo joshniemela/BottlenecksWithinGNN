@@ -1,0 +1,60 @@
+\documentclass[a4paper,12pt]{article}
+
+
+\usepackage[a4paper, hmargin={2.8cm, 2.8cm}, vmargin={3cm, 3cm}]{geometry}
+
+\usepackage[style=alphabetic,sorting=nyt]{biblatex}
+\addbibresource{sources.bib}
+
+
+
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{graphicx}  % For including images
+\usepackage{xcolor}  % For a colorfull presentation
+
+\usepackage{hyperref}
+
+\usepackage{tocloft}
+\setcounter{tocdepth}{3}
+
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=false,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+}
+\usepackage[english]{babel}
+
+
+\usepackage{lastpage} % Gør s˚a du kan referere til fuldt sideantal i header/footer
+\usepackage{fancyhdr} % headers and footers
+\pagestyle{fancy} % layout-relateret
+\fancyhf{} % skaber plads til header/footer
+\renewcommand{\headrulewidth}{0pt}
+\rfoot{Page \thepage\ of \pageref{LastPage}}
+
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0px}
+
+\begin{document}
+\title{TITLE}
+\author{AUTHORS}
+\date{}
+\maketitle
+
+
+\thispagestyle{empty}
+
+\newpage % Start a new page after the table of contents
+\setcounter{page}{1}
+
+
+\printbibliography[heading=bibintoc]
+
+\end{document}
