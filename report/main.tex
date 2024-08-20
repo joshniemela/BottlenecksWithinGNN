@@ -54,34 +54,37 @@
 
 \begin{document}
 
+
 \maketitle
 
 
+
 \section{Introduction}
-To alleviate various limitations of Graph Neural Networks (GNNs)  used in Graph Representation Learning (GRL), Topological Deep Learning (TDL) is emerging as a new frontier \cite{papamarkou_position:_2024}. 
+To alleviate various limitations of Graph Neural Networks (GNNs) used in Graph Representation Learning (GRL), Topological Deep Learning \cite{papamarkou_position:_2024} (TDL
+) is emerging as a new frontier \cite{papamarkou_position:_2024}. 
 TDL has shown promising results in tackling two common issues in GNNs: 
 \begin{itemize}
-    \item over-smoothing: where node features become too similar after multiple graph convolutions[CITATION NEEDED]
+    \item 
+\begin{itemize}
+    \item over-smoothing: where a growing amount of node features become too similar after multiple graph convolutions \cite{li_deeper_2018}
     \item over-squashing: where a growing amount of information from distant nodes is compressed into fixed-size vectors, leading to information loss \cite{alon_bottleneck_2021}.
 \end{itemize}
 
-Still, perhaps because of the young nature of the field, there is limited theoretical foundation for quantifying these possible advantages. This poses a problem in making quantitative comparisons between various architectures for GRL. In this paper, we attempt to lay the foundations for various metrics to provide insights on over-squashing and over-smoothing and how they relate to the model's ability to learn. To verify and support our theoretical foundations, we also run benchmarks against other approaches used for learning on graph data. [CITATION NEEDED]
+ \cite{alon_bottleneck_2021}.
+\end{itemize}
+
+Still, perhaps because of the young nature of the field, there is limited theoretical foundation for quantifying these possible advantages. This poses a problem in making quantitative comparisons between various architectures for GRL. In this paper, we attempt to lay the foundations for various metrics to provide insights on over-squashing and over-smoothing and how they relate to the model's ability to learn. To verify and support our theoretical foundations, we also run benchmarks against other approaches used for learning on graph data \cite{horn_topological_2022}
 
 \section{Data}
 We will be using the following datasets:
 \begin{enumerate}
-    \item QM9
-    \item Benchmark dataset for graph classification and the Human Body segmentation datasets  [RENAME THIS]
-    \item 
+    \item QM9 [FIGURE OUT WHAT THIS DATASET DOES AND WHY IT IS USEFUL]
+    \item Synthetic datasets [WHAT AND WHY]
 \end{enumerate}
-to benchmark our own implementations against other models cited in various papers.
-[REPHRASE THIS]
-
-
-Additionally, we will be constructing synthetic datasets to compare the expressivity between various models for the task of identifying various topological structures in graphs.
+We choose these datasets both to benchmark our own implementations against other models cited in various papers which make use of the same datasets. In addition we will create appropriate synthetic datasets.
 
 \section{Methods}
-We will be using Pytorch Geometric to build our models and to replicate models cited in other papers as a comparison and empirical exploration of GRL.
+We will be using PyTorch Geometric to build our models and to replicate models cited in other papers as a comparison and empirical exploration of GRL.
 [ADD MORE STUFF]
 
 \section{Learning Objectives}
@@ -89,7 +92,7 @@ We will be using Pytorch Geometric to build our models and to replicate models c
 
 \begin{enumerate}
     \item Gain a solid understanding of the theoretical foundations of GNNs.
-    \item Investigate the oversquashing problem in GNNs and how it affects the ability of the model to learn long-range dependencies\cite{alon_bottleneck_2021}.
+    \item Investigate the over-squashing problem in GNNs and how it affects the ability of the model to learn long-range dependencies\cite{alon_bottleneck_2021}.
     \item Gain insights and understanding about TDL, how topology is leveraged for learning, and how it relates to the aforementioned bottlenecks\cite{horn_topological_2022}.
     \item Construct generalisable metrics to quantify various geometric and topological properties of GNNs and the datasets they are trained on.
     \item Construct a model, for instance, a transformer or CCNN\cite{tdlbook}, that can learn topological features in data and benchmark against non-topological approaches.
