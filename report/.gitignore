@@ -9,4 +9,5 @@
 *.log
 *.out
 *.run.xml
+*.dvi
 .auctex-auto/*
