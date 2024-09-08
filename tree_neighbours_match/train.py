@@ -71,6 +71,7 @@ def train_eval_model(
         total_loss = 0
         train_correct = 0
         optimiser.zero_grad()
+
         for batch in train_loader:
             batch = batch.to(device)
             train_preds = model(batch)
@@ -78,7 +79,6 @@ def train_eval_model(
             total_loss += loss.item()
             train_pred = train_preds.argmax(dim=1)
             train_correct += train_pred.eq(batch.y).sum().item()
-
             loss.backward()
             optimiser.step()
             optimiser.zero_grad()
@@ -108,6 +108,17 @@ def train_eval_model(
                     "learning_rate": optimiser.param_groups[0]["lr"],
                 }
             )
+        else:
+            print(
+                {
+                    "depth": config["num_layers"] - 1,
+                    "epoch": epoch,
+                    "train_loss": avg_training_loss,
+                    "train_accuracy": train_acc,
+                    "eval_accuracy": eval_acc,
+                    "learning_rate": optimiser.param_groups[0]["lr"],
+                }
+            )
 
         if train_acc > best_train_acc + stopping_threshold:
             best_train_acc = train_acc
@@ -119,6 +130,8 @@ def train_eval_model(
             epochs_no_improve >= early_stop_patience and epoch > early_stop_grace_period
         ) or train_acc == 1.0:
             break
+
+    return model, train_acc, eval_acc
 
 
 def create_dataset_train_eval_model():
@@ -147,6 +160,7 @@ def create_dataset_train_eval_model():
         2 ** config["tree_depth"] + 1,
         config["tree_depth"] + 1,  # number of layers
         use_fully_adj=config["fully_adjacent_last_layer"],
+        mlp=config["mlp_aggregation"],
     ).to(device)
 
     # Prepare data (replace with actual data loading mechanism)
