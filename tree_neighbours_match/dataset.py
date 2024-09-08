@@ -21,7 +21,6 @@ def generate_tree(depth: int) -> Data:
 
     # Pick a random row from the second of the now random tree
     random_row = node_values[torch.randint(halfway_index, num_nodes, (1, 1)).squeeze()]
-    print(random_row)
 
     # We now set the y value to the class of this row
     # and we set the number of neighbours of the root node to the neighours of the row
