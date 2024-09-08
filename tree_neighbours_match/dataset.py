@@ -1,3 +1,5 @@
+""" Generate binary trees with random values and random number of neighbours. """
+
 import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import add_self_loops
@@ -50,9 +52,13 @@ def generate_tree(n: int, depth: int) -> list[Data]:
     edge_index = add_self_loops(edge_index, num_nodes=num_nodes)[0]
     edge_index = edge_index.repeat(n, 1, 1)
 
-    data = [Data(x=node_values[i], y=y[i], edge_index=edge_index[i]) for i in range(n)]
+    # We may use the data_list directly in a DataLoader object,
+    # https://pytorch-geometric.readthedocs.io/en/latest/notes/create_dataset.html
+    data_list = [
+        Data(x=node_values[i], y=y[i], edge_index=edge_index[i]) for i in range(n)
+    ]
 
-    return data
+    return data_list
 
 
 if __name__ == "__main__":
