@@ -121,6 +121,7 @@
         in {
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
+            ruff
             poetry
             my_env
             gtk3
