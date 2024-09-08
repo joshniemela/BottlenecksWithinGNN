@@ -3,10 +3,11 @@ import torch_geometric
 from torch_geometric.data import Data
 from torch_geometric.utils import add_self_loops
 
+
 def generate_tree(depth: int) -> Data:
     # Generate a binary tree with 2^depth nodes
     num_nodes = 2 ** (depth + 1) - 1
-    num_last_layer = 2 ** depth
+    num_last_layer = 2**depth
     halfway_index = num_nodes // 2
 
     node_values = torch.empty(num_nodes, 2, dtype=torch.int)
@@ -20,7 +21,7 @@ def generate_tree(depth: int) -> Data:
     node_values[halfway_index:, 1] = torch.randperm(num_last_layer) + 1
 
     # Pick a random row from the second of the now random tree
-    random_row = node_values[torch.randint(halfway_index, num_nodes, (1,1)).squeeze()]
+    random_row = node_values[torch.randint(halfway_index, num_nodes, (1, 1)).squeeze()]
     print(random_row)
 
     # We now set the y value to the class of this row
@@ -31,7 +32,7 @@ def generate_tree(depth: int) -> Data:
     # Create the edge list (it is a tree so we know it is n-1 edges)
     edge_index = torch.empty((2, num_nodes - 1), dtype=torch.int)
     edge_index[0, :] = torch.arange(1, num_nodes)
-    edge_index[1, :] = (edge_index[0, :] - 1)//2
+    edge_index[1, :] = (edge_index[0, :] - 1) // 2
     edge_index = add_self_loops(edge_index, num_nodes=num_nodes)[0]
 
     return Data(x=node_values, y=y, edge_index=edge_index)
