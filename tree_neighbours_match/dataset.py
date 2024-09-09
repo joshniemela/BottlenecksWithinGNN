@@ -49,7 +49,7 @@ def generate_tree(n: int, depth: int, device="cpu") -> list[Data]:
 
     # We now set the y value to the class of this row
     # and we set the number of neighbours of the root node to the neighours of the row
-    y = random_rows[:, 0]
+    y = random_rows[:, 0].long()
     node_values[:, 0, 1] = random_rows[:, 1]
 
     # Create the edge list (it is a tree so we know it is n-1 edges)
@@ -68,8 +68,28 @@ def generate_tree(n: int, depth: int, device="cpu") -> list[Data]:
     return data_list
 
 
+def train_test_split(data_list, train_ratio=0.8):
+    """
+    Split the data_list into train and test sets.
+
+    Args:
+        data_list (list[Data]): The list of Data objects to split.
+        train_ratio (float): The ratio of the training set.
+
+    Returns:
+        tuple: A tuple containing the training and test sets.
+
+    """
+    n = len(data_list)
+    train_size = int(n * train_ratio)
+    train_set = data_list[:train_size]
+    test_set = data_list[train_size:]
+
+    return train_set, test_set
+
+
 if __name__ == "__main__":
     # Generate 2 binary trees with depth 3
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    data = generate_tree(10000, 6, device)
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    data = generate_tree(36000, 4, DEVICE)
     print(data[0].x, data[0].y, data[0].edge_index)
