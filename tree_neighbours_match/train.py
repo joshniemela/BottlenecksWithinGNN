@@ -1,6 +1,6 @@
 from torch.nn import functional as F
 from torch.optim import Adam
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 import dataset as ds
 from models import GCN
 
