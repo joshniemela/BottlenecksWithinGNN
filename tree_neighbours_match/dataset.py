@@ -70,6 +70,6 @@ def generate_tree(n: int, depth: int, device="cpu") -> list[Data]:
 
 if __name__ == "__main__":
     # Generate 2 binary trees with depth 3
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    data = generate_tree(10000, 6, device)
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    data = generate_tree(36000, 4, DEVICE)
     print(data[0].x, data[0].y, data[0].edge_index)
