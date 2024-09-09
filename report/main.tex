@@ -89,6 +89,12 @@ We will also be creating and using synthetic datasets as this will give us more 
 	\item Construct a model, for instance, a transformer or CCNN~\cite{tdlbook}, that can learn topological features in data and benchmark against non-topological approaches.
 \end{enumerate}
 
+NOTE:
+Our tree neighbours using the approximation fr birthday problem has almost 0 likelihood for collisions between test and train
+
+both test and train are by definition IID but for depth 2 and 3 theres a ~100\% likelihood of samples existing on both sides
+
+
 \printbibliography
 
 \end{document}
