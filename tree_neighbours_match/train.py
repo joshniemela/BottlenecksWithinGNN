@@ -1,12 +1,20 @@
-import wandb
+"""
+This module contains the code for training and evaluating a GCN (Graph Convolutional Network) model using the wandb (Weights and Biases) integration and sweep for hyperparameter search.
+
+Functions:
+- train_eval_model: Trains and evaluates the GCN model.
+- train_eval_gcn_with_wandb: Wrapper function for wandb integration and sweep.
+"""
+
+import dataset as ds
+from models import GCN
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch import cuda
 from torch_geometric.loader import DataLoader
-import dataset as ds
-from models import GCN
+import wandb
 
 
 device = "cuda" if cuda.is_available() else "cpu"
@@ -18,6 +26,16 @@ device = "cpu"
 def train_eval_model(
     model: nn.Module, train_loader: DataLoader, eval_loader: DataLoader, config: dict
 ):
+    """
+    Trains and evaluates a model using the given train and evaluation data loaders.
+    Args:
+        model (nn.Module): The model to train and evaluate.
+        train_loader (DataLoader): The data loader for training data.
+        eval_loader (DataLoader): The data loader for evaluation data.
+        config (dict): A dictionary containing configuration parameters.
+    Returns:
+        None
+    """
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss(reduction="sum")
@@ -118,6 +136,16 @@ def train_eval_model(
 
 # Wrapper function for wandb integration and sweep
 def train_eval_gcn_with_wandb():
+    """
+    Train and evaluate a GCN model using wandb for logging.
+    This function initializes a wandb run, defines a GCN model, prepares the data, and runs the training and evaluation process.
+    The configuration for training is set using the wandb.config parameters.
+    Args:
+        None
+    Returns:
+        None
+    """
+
     wandb.init()
 
     # Define model
@@ -181,8 +209,9 @@ sweep_config = {
     },
 }
 
-# Initialize sweep
-sweep_id = wandb.sweep(sweep_config, project="GCN_Model")
+if __name__ == "__main__":
+    # Initialize sweep
+    sweep_id = wandb.sweep(sweep_config, project="GCN_Model")
 
-# Run the sweep
-wandb.agent(sweep_id, function=train_eval_gcn_with_wandb, count=1)
+    # Run the sweep
+    wandb.agent(sweep_id, function=train_eval_gcn_with_wandb, count=1)
