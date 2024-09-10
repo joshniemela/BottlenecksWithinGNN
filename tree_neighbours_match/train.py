@@ -38,6 +38,8 @@ best_epoch = 0
 epochs_no_improve = 0
 
 
+# Code takes inspiration from https://github.com/tech-srl/bottleneck
+# By Uri Alon and Eran Yahav
 for epoch in range(max_epochs):
     # Training step
     model.train()
