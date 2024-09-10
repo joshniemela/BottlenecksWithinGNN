@@ -39,8 +39,8 @@ class GCN(nn.Module):
         x_neighbours = self.neighbor_num_embedding(x_neighbours)
         x = x_classes + x_neighbours
 
-        for i in range(len(self.layers)):
-            x_new = self.layers[i](x, edge_index)
+        for i, layer in enumerate(self.layers):
+            x_new = layer(x, edge_index)
             x_new = F.relu(x_new)
             x = x + x_new
             x = self.layer_norms[i](x)
