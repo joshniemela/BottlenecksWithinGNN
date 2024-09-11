@@ -51,7 +51,7 @@ class GCN(nn.Module):
         num_batches = batch[-1] + 1
 
         # Use fully adjacent edges if specified
-        edge_index = create_fully_adjacent_edges(num_nodes, num_batches).to(x.device)
+        edge_index = create_fully_adjacent_edges(num_nodes, num_batches).to(x.device) if self.use_fully_adj else edge_index
 
         # We set the roots mask to be 1, 0,..., 1, 0...
         # where 1 is the root and 0 is not a root.
