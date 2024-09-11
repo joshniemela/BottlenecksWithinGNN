@@ -7,7 +7,7 @@ Functions:
 """
 
 import dataset as ds
-from models import GCN
+from models import GCN, GGNN, GIN, GAT
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -20,7 +20,7 @@ import wandb
 device = "cuda" if cuda.is_available() else "cpu"
 
 # Debugger is more happy if we use the CPU
-#device = "cpu"
+# device = "cpu"
 
 
 def train_eval_model(
@@ -58,10 +58,7 @@ def train_eval_model(
     # Some variables to keep track of the best model
     # for the purpose of early stopping
     best_train_acc = 0.0
-    best_epoch = 0
     epochs_no_improve = 0
-
-    print("Starting training")
 
     # Code takes inspiration from https://github.com/tech-srl/bottleneck
     # By Uri Alon and Eran Yahav
@@ -111,27 +108,14 @@ def train_eval_model(
 
         if train_acc > best_train_acc + stopping_threshold:
             best_train_acc = train_acc
-            best_epoch = epoch
             epochs_no_improve = 0
-            new_best_train = True
         else:
             epochs_no_improve += 1
-            new_best_train = False
-
-        cur_lr = [g["lr"] for g in optimiser.param_groups]
-        print(
-            f"Epoch {epoch}, LR: {cur_lr}: Train loss: {avg_training_loss:.7f}, Train acc: {train_acc:.4f}, Test accuracy: {eval_acc:.4f}",
-            "(new best train)" if new_best_train else "",
-        )
 
         if (
             epochs_no_improve >= early_stop_patience and epoch > early_stop_grace_period
         ) or train_acc == 1.0:
-            print(
-                f"{early_stop_patience} epochs without train acc improvement, stopping. "
-            )
             break
-    print(f"Best train acc: {best_train_acc}, epoch: {best_epoch}")
 
 
 # Wrapper function for wandb integration and sweep
@@ -149,11 +133,12 @@ def train_eval_gcn_with_wandb():
     wandb.init()
 
     # Define model
-    model = GCN(
+    model = GAT(
         2**wandb.config.tree_depth + 1,
         wandb.config.hidden_dim,
         2**wandb.config.tree_depth + 1,
         wandb.config.num_layers,
+        use_fully_adj=wandb.config.fully_adjacent_last_layer,
     ).to(device)
 
     # Prepare data (replace with actual data loading mechanism)
@@ -196,7 +181,7 @@ sweep_config = {
     "metric": {"name": "train_accuracy", "goal": "maximize"},
     "parameters": {
         "tree_depth": {"values": [3]},
-        "num_trees": {"values": [10000]},
+        "num_trees": {"values": [40000]},
         "epochs": {"values": [1000]},
         # Initial learning rate (intentionally too high)
         "lr": {"values": [0.01]},
@@ -211,6 +196,7 @@ sweep_config = {
         "scheduler_factor": {"values": [0.75]},
         # Number of epochs to wait before reducing LR
         "scheduler_patience": {"values": [5]},
+        "fully_adjacent_last_layer": {"values": [False]},
     },
 }
 
