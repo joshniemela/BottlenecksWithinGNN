@@ -133,7 +133,7 @@ def train_eval_gcn_with_wandb():
     wandb.init()
 
     # Define model
-    model = GAT(
+    model = model_dict[wandb.config.model_type](
         2**wandb.config.tree_depth + 1,
         wandb.config.hidden_dim,
         2**wandb.config.tree_depth + 1,
@@ -175,11 +175,14 @@ def train_eval_gcn_with_wandb():
     wandb.finish()
 
 
+model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
+
 # Sweep Configuration for hyperparameter search
 sweep_config = {
     "method": "bayes",
     "metric": {"name": "train_accuracy", "goal": "maximize"},
     "parameters": {
+        "model_type": {"values": ["GCN"]},
         "tree_depth": {"values": [3]},
         "num_trees": {"values": [40000]},
         "epochs": {"values": [1000]},
@@ -202,7 +205,7 @@ sweep_config = {
 
 if __name__ == "__main__":
     # Initialize sweep
-    sweep_id = wandb.sweep(sweep_config, project="GCN_Model")
+    sweep_id = wandb.sweep(sweep_config, project="TreeBottleneckReproduction")
 
     # Run the sweep
     wandb.agent(sweep_id, function=train_eval_gcn_with_wandb, count=1)
