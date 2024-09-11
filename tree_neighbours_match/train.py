@@ -137,7 +137,7 @@ def train_eval_gcn_with_wandb():
         2**wandb.config.tree_depth + 1,
         wandb.config.hidden_dim,
         2**wandb.config.tree_depth + 1,
-        wandb.config.num_layers,
+        wandb.config.tree_depth + 1,  # number of layers
         use_fully_adj=wandb.config.fully_adjacent_last_layer,
     ).to(device)
 
@@ -159,7 +159,7 @@ def train_eval_gcn_with_wandb():
         "lr": wandb.config.lr,
         "batch_size": wandb.config.batch_size,
         "hidden_dim": wandb.config.hidden_dim,
-        "num_layers": wandb.config.num_layers,
+        "num_layers": wandb.config.tree_depth + 1,
         "early_stop_patience": wandb.config.early_stop_patience,
         "early_stop_grace_period": wandb.config.early_stop_grace_period,
         "stopping_threshold": wandb.config.stopping_threshold,
@@ -191,7 +191,6 @@ sweep_config = {
         # FIXME: setting this to 4096 causes a bizarre error
         "batch_size": {"values": [2048]},
         "hidden_dim": {"values": [32]},
-        "num_layers": {"values": [4]},
         "early_stop_patience": {"values": [20]},
         "early_stop_grace_period": {"values": [50]},
         "stopping_threshold": {"values": [0.0001]},
