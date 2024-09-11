@@ -20,7 +20,7 @@ import wandb
 device = "cuda" if cuda.is_available() else "cpu"
 
 # Debugger is more happy if we use the CPU
-device = "cpu"
+#device = "cpu"
 
 
 def train_eval_model(
@@ -154,17 +154,18 @@ def train_eval_gcn_with_wandb():
         wandb.config.hidden_dim,
         2**wandb.config.tree_depth + 1,
         wandb.config.num_layers,
-    )
+    ).to(device)
 
     # Prepare data (replace with actual data loading mechanism)
     train_data, test_data = ds.train_test_split(
         ds.generate_tree(wandb.config.num_trees, wandb.config.tree_depth, device)
     )
+    # print devices
     train_loader = DataLoader(
-        train_data, batch_size=wandb.config.batch_size, pin_memory=True
+        train_data, batch_size=wandb.config.batch_size, pin_memory=False
     )
     eval_loader = DataLoader(
-        test_data, batch_size=wandb.config.batch_size, pin_memory=True
+        test_data, batch_size=wandb.config.batch_size, pin_memory=False
     )
 
     # Configuration for training
@@ -197,14 +198,18 @@ sweep_config = {
         "tree_depth": {"values": [3]},
         "num_trees": {"values": [10000]},
         "epochs": {"values": [1000]},
+        # Initial learning rate (intentionally too high)
         "lr": {"values": [0.01]},
+        # FIXME: setting this to 4096 causes a bizarre error
         "batch_size": {"values": [2048]},
         "hidden_dim": {"values": [32]},
         "num_layers": {"values": [4]},
         "early_stop_patience": {"values": [20]},
         "early_stop_grace_period": {"values": [50]},
         "stopping_threshold": {"values": [0.0001]},
+        # If scheduler runs out of patience, it multiplies current LR by this factor
         "scheduler_factor": {"values": [0.75]},
+        # Number of epochs to wait before reducing LR
         "scheduler_patience": {"values": [5]},
     },
 }
