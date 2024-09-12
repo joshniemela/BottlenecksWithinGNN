@@ -17,7 +17,7 @@ def create_fully_adjacent_edges(num_nodes, num_trees):
     # We need to connect all nodes to a root, therefore we can just count from 1 to num_nodes for each tree
     source_nodes = torch.arange(num_nodes * num_trees)
     # Floor division to get the root node for each tree
-    target_nodes = source_nodes // num_nodes
+    target_nodes = num_nodes * (source_nodes // num_nodes)
     return torch.stack([source_nodes, target_nodes])
 
 
