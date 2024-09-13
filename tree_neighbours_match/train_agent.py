@@ -17,7 +17,7 @@ from torch_geometric.loader import DataLoader
 import wandb
 import yaml
 import os
-
+import argparse
 
 device = "cuda" if cuda.is_available() else "cpu"
 
@@ -225,5 +225,13 @@ sweep_config = {
     },
 }
 
+parser = argparse.ArgumentParser("Sweep agent")
+parser.add_argument("--id", type=str, default="None")
+args = parser.parse_args()
+
 if __name__ == "__main__":
-    create_dataset_train_eval_model()
+    args = parser.parse_args()
+    if args.id == "None":
+        raise ValueError("Please provide a sweep ID")
+    # Run the sweep
+    wandb.agent(args.id, function=train_eval_gcn_with_wandb)
