@@ -20,7 +20,7 @@ import wandb
 device = "cuda" if cuda.is_available() else "cpu"
 
 # Debugger is more happy if we use the CPU
-# device = "cpu"
+#device = "cpu"
 
 
 def train_eval_model(
@@ -179,11 +179,11 @@ model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
 
 # Sweep Configuration for hyperparameter search
 sweep_config = {
-    "method": "bayes",
+    "method": "grid",
     "metric": {"name": "train_accuracy", "goal": "maximize"},
     "parameters": {
-        "model_type": {"values": ["GCN"]},
-        "tree_depth": {"values": [3]},
+        "model_type": {"values": ["GCN", "GGNN", "GIN", "GAT"]},
+        "tree_depth": {"values": [2, 3, 4]},
         "num_trees": {"values": [40000]},
         "epochs": {"values": [1000]},
         # Initial learning rate (intentionally too high)
@@ -207,4 +207,4 @@ if __name__ == "__main__":
     sweep_id = wandb.sweep(sweep_config, project="TreeBottleneckReproduction")
 
     # Run the sweep
-    wandb.agent(sweep_id, function=train_eval_gcn_with_wandb, count=1)
+    wandb.agent(sweep_id, function=train_eval_gcn_with_wandb)
