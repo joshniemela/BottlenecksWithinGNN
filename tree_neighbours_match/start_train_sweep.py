@@ -1,7 +1,5 @@
 import wandb
 
-model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
-
 # Sweep Configuration for hyperparameter search
 sweep_config = {
     "method": "grid",
