@@ -15,7 +15,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch import cuda
 from torch_geometric.loader import DataLoader
 import wandb
-
+import argparse
 
 device = "cuda" if cuda.is_available() else "cpu"
 
@@ -202,9 +202,13 @@ sweep_config = {
     },
 }
 
-if __name__ == "__main__":
-    # Initialize sweep
-    sweep_id = wandb.sweep(sweep_config, project="TreeBottleneckReproduction")
+parser = argparse.ArgumentParser("Sweep agent")
+parser.add_argument("--id", type=str, default="None")
+args = parser.parse_args()
 
+if __name__ == "__main__":
+    args = parser.parse_args()
+    if args.id == "None":
+        raise ValueError("Please provide a sweep ID")
     # Run the sweep
-    wandb.agent(sweep_id, function=train_eval_gcn_with_wandb)
+    wandb.agent(args.id, function=train_eval_gcn_with_wandb)
