@@ -55,7 +55,7 @@ def generate_tree(n: int, depth: int, device="cpu") -> list[Data]:
     # Create the edge list (it is a tree so we know it is n-1 edges)
     edge_index = torch.empty((2, num_nodes - 1), dtype=torch.int, device=device)
     edge_index[0, :] = torch.arange(1, num_nodes, device=device)
-    edge_index[1, :] = (edge_index[0, :] - 1) // 2
+    edge_index[1, :] = torch.div((edge_index[0, :] - 1), 2, rounding_mode="floor")
     edge_index = add_self_loops(edge_index, num_nodes=num_nodes)[0]
     edge_index = edge_index.repeat(n, 1, 1)
 
