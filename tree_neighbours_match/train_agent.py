@@ -227,11 +227,16 @@ sweep_config = {
 
 parser = argparse.ArgumentParser("Sweep agent")
 parser.add_argument("--id", type=str, default="None")
+parser.add_argument("--project", type=str, default="Uncategorized")
+parser.add_argument("--key", type=str, default="None")
 args = parser.parse_args()
 
 if __name__ == "__main__":
     args = parser.parse_args()
     if args.id == "None":
         raise ValueError("Please provide a sweep ID")
+    if args.key != "None":
+        wandb.login(key=args.key)
+
     # Run the sweep
-    wandb.agent(args.id, function=train_eval_gcn_with_wandb)
+    wandb.agent(args.id, function=train_eval_gcn_with_wandb, project=args.project)
