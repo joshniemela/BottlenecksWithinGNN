@@ -6,8 +6,8 @@ Functions:
 - train_eval_gcn_with_wandb: Wrapper function for wandb integration and sweep.
 """
 
+from models import model_dict
 import dataset as ds
-from models import GCN, GGNN, GIN, GAT
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -15,9 +15,12 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch import cuda
 from torch_geometric.loader import DataLoader
 import wandb
+import yaml
+import os
 
 
 device = "cuda" if cuda.is_available() else "cpu"
+
 
 # Debugger is more happy if we use the CPU
 # device = "cpu"
@@ -48,7 +51,7 @@ def train_eval_model(
         patience=config["scheduler_patience"],
     )
 
-    max_epochs = config["epochs"]
+    max_epochs = config["max_epochs"]
     early_stop_patience = config["early_stop_patience"]
     early_stop_grace_period = config["early_stop_grace_period"]
     stopping_threshold = config["stopping_threshold"]
@@ -118,65 +121,66 @@ def train_eval_model(
             break
 
 
-# Wrapper function for wandb integration and sweep
-def train_eval_gcn_with_wandb():
-    """
-    Train and evaluate a GCN model using wandb for logging.
-    This function initializes a wandb run, defines a GCN model, prepares the data, and runs the training and evaluation process.
-    The configuration for training is set using the wandb.config parameters.
-    Args:
-        None
-    Returns:
-        None
-    """
+def create_dataset_train_eval_model():
+    # Load YAML file
+    with open(
+        os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+        + "/sweep_config.yaml",
+        "r",
+        encoding="utf-8",
+    ) as file:
+        config = yaml.safe_load(file).get("parameters")
 
-    wandb.init()
+    # for each parameter extract the list of values
+    for key, value in config.items():
+        config[key] = value["values"]
+
+    # For each config with more than one list element, choose the first element
+    for key, value in config.items():
+        if isinstance(value, list):
+            config[key] = value[0]
 
     # Define model
-    model = model_dict[wandb.config.model_type](
-        2**wandb.config.tree_depth + 1,
-        wandb.config.hidden_dim,
-        2**wandb.config.tree_depth + 1,
-        wandb.config.tree_depth + 1,  # number of layers
-        use_fully_adj=wandb.config.fully_adjacent_last_layer,
+    model = model_dict[config["model_type"]](
+        2 ** config["tree_depth"] + 1,
+        config["hidden_dim"],
+        2 ** config["tree_depth"] + 1,
+        config["tree_depth"] + 1,  # number of layers
+        use_fully_adj=config["fully_adjacent_last_layer"],
     ).to(device)
 
     # Prepare data (replace with actual data loading mechanism)
     train_data, test_data = ds.train_test_split(
-        ds.generate_tree(wandb.config.num_trees, wandb.config.tree_depth, device)
+        ds.generate_tree(config["num_trees"], config["tree_depth"], device)
     )
-    # print devices
+
+    # Print devices
     train_loader = DataLoader(
-        train_data, batch_size=wandb.config.batch_size, pin_memory=False
+        train_data, batch_size=config["batch_size"], pin_memory=False
     )
     eval_loader = DataLoader(
-        test_data, batch_size=wandb.config.batch_size, pin_memory=False
+        test_data, batch_size=config["batch_size"], pin_memory=False
     )
 
     # Configuration for training
-    config = {
-        "epochs": wandb.config.epochs,
-        "lr": wandb.config.lr,
-        "batch_size": wandb.config.batch_size,
-        "hidden_dim": wandb.config.hidden_dim,
-        "num_layers": wandb.config.tree_depth + 1,
-        "early_stop_patience": wandb.config.early_stop_patience,
-        "early_stop_grace_period": wandb.config.early_stop_grace_period,
-        "stopping_threshold": wandb.config.stopping_threshold,
-        "scheduler_factor": wandb.config.scheduler_factor,
-        "scheduler_patience": wandb.config.scheduler_patience,
-        "use_wandb": True,  # Flag to enable wandb logging
+    training_config = {
+        "max_epochs": config["max_epochs"],
+        "lr": config["lr"],
+        "batch_size": config["batch_size"],
+        "hidden_dim": config["hidden_dim"],
+        "num_layers": config["tree_depth"] + 1,
+        "early_stop_patience": config["early_stop_patience"],
+        "early_stop_grace_period": config["early_stop_grace_period"],
+        "stopping_threshold": config["stopping_threshold"],
+        "scheduler_factor": config["scheduler_factor"],
+        "scheduler_patience": config["scheduler_patience"],
+        "use_wandb": False,  # Flag to enable wandb logging
     }
 
     # Run general training function
-    train_eval_model(model, train_loader, eval_loader, config)
+    train_eval_model(model, train_loader, eval_loader, training_config)
 
-    # Finish wandb run
-    wandb.finish()
-
-
-model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
 
 if __name__ == "__main__":
-    # Run the sweep
-    train_eval_gcn_with_wandb()
+
+    create_dataset_train_eval_model()

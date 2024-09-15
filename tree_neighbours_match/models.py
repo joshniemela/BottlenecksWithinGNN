@@ -277,3 +277,6 @@ class GAT(nn.Module):
         logits = self.output_layer(root_nodes)
 
         return logits
+
+
+model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
