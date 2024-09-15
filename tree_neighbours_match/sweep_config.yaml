@@ -1,4 +1,4 @@
-program: train.py
+program: train_with_wandb.py
 project: TreeBottleneckReproduction
 name: sweepdemo
 method: random
@@ -12,23 +12,23 @@ parameters:
     values: [3, 4, 5]
   num_trees:
     values: [40000]
-  epochs:
-    values: [1000]
+  max_epochs:
+    values: [50000]
   lr:
     values: [0.01]
   batch_size:
-    values: [2048]
+    values: [64, 1024, 2048]
   hidden_dim:
     values: [32]
   early_stop_patience:
     values: [20]
   early_stop_grace_period:
-    values: [50]
+    values: [20]
   stopping_threshold:
     values: [0.0001]
   scheduler_factor:
-    values: [0.75]
+    values: [0.5]
   scheduler_patience:
-    values: [5]
+    values: [10]
   fully_adjacent_last_layer:
     values: [false]
