@@ -1,2 +1,3 @@
 .envrc
 .direnv
+*.container_wrap
