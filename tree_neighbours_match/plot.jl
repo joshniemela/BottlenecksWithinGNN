@@ -1,4 +1,7 @@
 using Plots
+using PGFPlotsX
+pgfplotsx()
+
 using CSV
 using DataFrames
 using Statistics
@@ -18,3 +21,7 @@ df.fully_adjacent_last_layer = ifelse.(df.fully_adjacent_last_layer .== true, "w
     legend=:topright,
     yticks=0:0.1:1
 )
+
+
+savefig("out.pdf")
+savefig("out.tex")
