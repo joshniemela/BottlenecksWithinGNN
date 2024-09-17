@@ -2,6 +2,8 @@
 \usepackage[a4paper, hmargin={1.8cm, 1.8cm}, vmargin={1cm, 1cm}]{geometry}
 
 \usepackage[style=alphabetic,sorting=nyt]{biblatex}
+
+\usepackage{tikz}
 \addbibresource{sources.bib}
 
 \usepackage{amsfonts}
@@ -11,6 +13,7 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 
+\usepackage{pdfpages}
 \usepackage{tocloft}
 \setcounter{tocdepth}{3}
 
@@ -22,8 +25,6 @@
   urlcolor=blue,
 }
 \usepackage[english]{babel}
-
-
 \usepackage{lastpage}
 \usepackage{fancyhdr}
 \pagestyle{fancy}
@@ -107,6 +108,9 @@ We sample from this dataset by generating a binary tree, then creating a permuta
 
 By the birthday paradox, we know this means these depths will very likely contain duplicate entries in the train and test data. Since they are both sampled IID this means it will not result in overfitting. In the event that the model has perfectly learnt the training data which contains all possible unique entries, we know that any future samples we throw at the model will also just contain the same entries we can classify.
 For depths greater then 3, the number of unique trees grows to the point where the likelihood of duplicate entries goes towards 0.
+
+
+\includegraphics{tree_experiment_graph.pdf}
 
 \printbibliography
 
