@@ -1,9 +1,8 @@
 \documentclass[a4paper,12pt]{article}
-\usepackage[a4paper, hmargin={1.8cm, 1.8cm}, vmargin={1cm, 1cm}]{geometry}
+\usepackage[a4paper, top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
 
 \usepackage[style=alphabetic,sorting=nyt]{biblatex}
-
-\usepackage{tikz}
+% setting the path to the bib file
 \addbibresource{sources.bib}
 
 \usepackage{amsfonts}
@@ -16,6 +15,9 @@
 \usepackage{pdfpages}
 \usepackage{tocloft}
 \setcounter{tocdepth}{3}
+
+\usepackage{tikz}
+\usepackage{pgfplots}
 
 \usepackage{hyperref}
 \hypersetup{
@@ -110,7 +112,7 @@ By the birthday paradox, we know this means these depths will very likely contai
 For depths greater then 3, the number of unique trees grows to the point where the likelihood of duplicate entries goes towards 0.
 
 
-\includegraphics{tree_experiment_graph.pdf}
+\input{tree_experiment_graph.tex}
 
 \printbibliography
 
