@@ -7,17 +7,17 @@ metric:
   name: train_accuracy
 parameters:
   model_type:
-    values: ["GAT", "GCN", "GGNN", "GIN"]
+    values: ["GCN"]
   tree_depth:
-    values: [3, 4, 5]
+    values: [2, 3, 4, 5]
   num_trees:
     values: [40000]
   max_epochs:
     values: [50000]
   lr:
-    values: [0.01]
+    values: [0.01, 0.001]
   batch_size:
-    values: [64, 1024, 2048]
+    values: [2048]
   hidden_dim:
     values: [32]
   early_stop_patience:
@@ -31,4 +31,4 @@ parameters:
   scheduler_patience:
     values: [10]
   fully_adjacent_last_layer:
-    values: [false]
+    values: [false, true]
