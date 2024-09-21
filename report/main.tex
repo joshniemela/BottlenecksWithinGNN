@@ -97,7 +97,8 @@ We will also be creating and using synthetic datasets as this will give us more 
 \section{Tree neighbours-match}
 We decided to try to reproduce the over-squashing problem from \cite{alon_bottleneck_2021}.
 \subsection{Data}
-The dataset of a given depth $d$ is comprised of binary trees of depth $d$ and $n$ unique iid. trees. Each node of the graph has two features, a class, and the number of ``leaves''. We can represent a tree as a directed and connected graph $G \in (V, E)$. We can construct the edge list, $E \in \mathbb{N}^{2 \times (2n-1)}$ in two parts. The first half contains all the edges going from the children towards the root. We have $E_{1, i_{1}}=i_{1}$ and $E_{2, i_{1}} = \lfloor \frac{i_{1}-1}{2} \rfloor$ for $i_{1} \in \{1, 2, \ldots, n-1\}$. The second part contains self-loops between all the nodes in the graph, $E_{1, i_{2}} = E_{2, i_{2}}=i_{2}-n$ for $i_{2} \in \{n, n+1, \ldots, 2n-1, 2n\}$.
+The dataset of a given depth $d$ is comprised of binary trees of depth $d$ and $n$ unique iid. trees. Each node of the graph has two features, a class, and the number of ``leaves''. We can represent a tree as a directed and connected graph $G \in (V, E)$ where $(i, j) \in E$ [COMMENT FROM RAGHAV?].
+We let $A$ represent the adjacency matrix for a given tree without any self-loops. Let $A_{i,j}= \text{if } \lfloor \frac{i}{2}\rfloor = j \text{ then } 1 \text{ else } 0$. We use self-loops since they have a positive effect on performance [CITE THE CURVATURE PAPER(?)]: $\bar{A}=A+I$, where $I$ is the identity matrix.
 
 The $V \in \mathbb{N}^{2 \times n}$ contain our attributes for the nodes. All nodes other than nodes at depth $d$ have a class of 0: $V_{1, i_{1}} = 0, i_{1} \in \{0, 1, 2, \ldots, n-2^{d}-1, n-2^{d}\}$. The remaining nodes are labelled in ascending order: $V_{1, i_{2}}= i_{2}-(n-2^{d}), i_{2} \in \{n-2^{d}+1, \ldots, n-1, n\}$.
 The root has a random number of leaves between $1$ and $2^{d}$. The nodes in the last layer are sampled to have a random number of leaves between $1$ and $2^{d}$ without replacement. All nodes between depth $1$ to $d-1$ are set to have 0 leaves. The label for the dataset is then finally set to be the class whose leaves match the number of leaves of the root. Note that the edge matrix is 1-indexed and the attribute matrix is 0-indexed for ease of notation.
@@ -105,15 +106,8 @@ The root has a random number of leaves between $1$ and $2^{d}$. The nodes in the
 NOTE:
 Our tree neighbours using the approximation fr birthday problem has almost 0 likelihood for collisions between test and train
 
-both test and train are by definition IID but for depth 2 and 3 theres a ~100\% likelihood of samples existing on both sides
-
 
 \section{NOTES FROM RESEARCH THAT HAVE NOT BEEN ORGANISED!}
-
-We reproduced the ``tree neighbours-match'' dataset from BOTTLENECK SOURCE.
-The dataset is a made of full balanced binary trees. Each node has two values, a class and a number of ``leaves''. All nodes that aren't part of the bottom layer have a class of 0 or ``unspecified''. Each node in the bottom layer are labelled incrementally, so the leftmost child is class 1 and the rightmost child is $2^{d}$ and a unique number of leaves. The root has an unspecified class and a unique number of leaves that corresponds to one of the bottom nodes. The task is then for the network to figure out what class the root pairs up from the bottom layer.
-
-These balanced binary trees are directed graphs pointing up towards the root.
 
 For each given depth $d$, we have $2^{d}! \cdot 2^{d}$ ($2^{d}!$ permutations of the bottom layer, $2^{d}$ possible root labels) possible trees / samples. We notice this means that for $d=2$ and $d=3$, we only get $96$ and $322560$ unique trees respectively.
 We sample from this dataset by generating a binary tree, then creating a permutation of the unique number of leaves and then randomly picking a class that the root should mimic.
@@ -124,7 +118,8 @@ For depths greater then 3, the number of unique trees grows to the point where t
 
 \subsection{Running the experiment} % tree neighbours-match
 
-Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more wildly propose as a huristic approach to deal with over-squashing . This has led us to implement the fully adjacent last layer and compare it to the fully connected last layer. We have in total run 1135 experiments, with a random distribution of parameter choice, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
+Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more widely propose as a heuristic approach to deal with over-squashing. 
+This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
 
 \begin{figure}[H]
 	\centering
@@ -133,6 +128,13 @@ Although in \cite{alon_bottleneck_2021}, the authors present their findings on t
 	\label{fig:tree_experiment_graph}
 \end{figure}
 
+\section{model archetecture} % tree neighbours-match
+
+The two node features are embedded in a 32 dimensional space using a linear layer with trainable weights without a bias parameter.   
+
+\subsection{Results} % tree neighbours-match
+
+The results of the tree neighbours-match experiment show that contrary to the findings in \cite{alon_bottleneck_2021}, the fully adjacent last layer does not outperform the GCN model without the fully adjacent last layer. The results are consistent across all depths and the fully connected last layer outperforms the fully adjacent last layer in all cases. This is an interesting result and motivates further investigation into the over-squashing problem on a more theoretical level rather than just heuristic, as it is difficult to draw any conclusions from our contradictory results alone. 
 
 
 \printbibliography
