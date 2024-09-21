@@ -1,6 +1,8 @@
 \documentclass[a4paper,12pt]{article}
 \usepackage[a4paper, top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
 
+\usepackage{float}
+
 \usepackage[style=alphabetic,sorting=nyt]{biblatex}
 % setting the path to the bib file
 \addbibresource{sources.bib}
@@ -112,7 +114,18 @@ By the birthday paradox, we know this means these depths will very likely contai
 For depths greater then 3, the number of unique trees grows to the point where the likelihood of duplicate entries goes towards 0.
 
 
-\input{tree_experiment_graph.tex}
+\subsection{Running the experiment} % tree neighbours-match
+
+Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more wildly propose as a huristic approach to deal with over-squashing . This has led us to implement the fully adjacent last layer and compare it to the fully connected last layer. We have in total run 1135 experiments, with a random distribution of parameter choice, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
+
+\begin{figure}[H]
+	\centering
+	\input{tree_experiment_graph.tex}
+	\caption{The results of the tree neighbours-match experiment.}
+	\label{fig:tree_experiment_graph}
+\end{figure}
+
+
 
 \printbibliography
 
