@@ -9,7 +9,7 @@ parameters:
   model_type:
     values: ["GCN"]
   tree_depth:
-    values: [2, 3, 4, 5]
+    values: [4, 5]
   num_trees:
     values: [20000]
   max_epochs:
