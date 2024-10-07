@@ -11,13 +11,13 @@ parameters:
   tree_depth:
     values: [4, 5]
   num_trees:
-    values: [20000]
+    values: [40000]
   max_epochs:
     values: [50000]
   lr:
     values: [0.01, 0.001]
   batch_size:
-    values: [2048]
+    values: [1024]
   hidden_dim:
     values: [32]
   early_stop_patience:

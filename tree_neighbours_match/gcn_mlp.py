@@ -8,9 +8,9 @@ class GCNMLPConv(MessagePassing):
     def __init__(self, in_channels, out_channels):
         super().__init__(aggr=MLPAggregation(in_channels = in_channels,
                                              out_channels = out_channels,
-                                             hidden_channels=8,
+                                             hidden_channels=32,
                                              max_num_elements=2,
-                                             num_layers=3))
+                                             num_layers=2))
         self.lin = Linear(in_channels, out_channels, bias=False)
         self.bias = Parameter(torch.empty(out_channels))
 
