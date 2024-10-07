@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, GatedGraphConv, GINConv, GATConv
+from gcn_mlp import GCNMLPConv
 
 
 def create_fully_adjacent_edges(num_nodes, num_trees):
@@ -38,7 +39,7 @@ class GCN(nn.Module):
 
         self.layers = nn.ModuleList()
         for _ in range(num_layers):
-            self.layers.append(GCNConv(hidden_dim, hidden_dim))
+            self.layers.append(GCNMLPConv(hidden_dim, hidden_dim))
 
         self.layer_norms = nn.ModuleList()
         for _ in range(num_layers):

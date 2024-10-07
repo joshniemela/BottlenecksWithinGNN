@@ -108,6 +108,16 @@ def train_eval_model(
                     "learning_rate": optimiser.param_groups[0]["lr"],
                 }
             )
+        else:
+            print(
+                {
+                    "epoch": epoch,
+                    "train_loss": avg_training_loss,
+                    "train_accuracy": train_acc,
+                    "eval_accuracy": eval_acc,
+                    "learning_rate": optimiser.param_groups[0]["lr"],
+                }
+            )
 
         if train_acc > best_train_acc + stopping_threshold:
             best_train_acc = train_acc

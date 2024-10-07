@@ -11,7 +11,7 @@ parameters:
   tree_depth:
     values: [2, 3, 4, 5]
   num_trees:
-    values: [40000]
+    values: [20000]
   max_epochs:
     values: [50000]
   lr:
@@ -31,4 +31,4 @@ parameters:
   scheduler_patience:
     values: [10]
   fully_adjacent_last_layer:
-    values: [false, true]
+    values: [false]
