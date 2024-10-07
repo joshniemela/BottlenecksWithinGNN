@@ -119,7 +119,7 @@ For depths greater then 3, the number of unique trees grows to the point where t
 \subsection{Running the experiment} % tree neighbours-match
 
 Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more widely propose as a heuristic approach to deal with over-squashing. 
-This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
+This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in Figure \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
 
 \begin{figure}[H]
 	\centering
@@ -128,9 +128,12 @@ This has led us to implement the fully adjacent last layer and compare the model
 	\label{fig:tree_experiment_graph}
 \end{figure}
 
-\section{model archetecture} % tree neighbours-match
+\section{Model architecture} % tree neighbours-match
 
-The two node features are embedded in a 32 dimensional space using a linear layer with trainable weights without a bias parameter.   
+The two node features are embedded in a 32 dimensional space using a linear layer with trainable weights without a bias parameter. We used RELU as our activation function and mean as our graph convolution aggregator. The models have $d+1$ layers, where $d$ is the depth of the trees in our given dataset.
+We use the [INSERT THE NAME OF THIS THING] normalisation as utilised in PyTorch Geometric. We used ADAM and a reduce LR on plateau scheduler with [PARAMS?].
+
+The last fully adjacent layer connects every single node to the root, we can omit the remaining pairwise connections since the resulting messages don't get propagated to the root before we finish the message passing. Let $r$ be the root node, we then have: $E_{FA} \subseteq \{(i, j) \mid i \in V, j = r\}$.
 
 \subsection{Results} % tree neighbours-match
 
