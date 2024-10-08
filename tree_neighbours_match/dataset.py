@@ -2,7 +2,7 @@
 
 import torch
 from torch_geometric.data import Data
-from torch_geometric.utils import add_self_loops
+from torch_geometric.utils import add_self_loops, sort_edge_index
 
 
 def generate_tree(n: int, depth: int, device="cpu") -> list[Data]:
@@ -57,6 +57,7 @@ def generate_tree(n: int, depth: int, device="cpu") -> list[Data]:
     edge_index[0, :] = torch.arange(1, num_nodes, device=device)
     edge_index[1, :] = (edge_index[0, :] - 1) // 2
     edge_index = add_self_loops(edge_index, num_nodes=num_nodes)[0]
+    edge_index = sort_edge_index(edge_index, num_nodes=num_nodes, sort_by_row=False)
     edge_index = edge_index.repeat(n, 1, 1)
 
     # We may use the data_list directly in a DataLoader object,

@@ -24,12 +24,6 @@ class GCNMLPConv(MessagePassing):
         # x has shape [N, in_channels]
         # edge_index has shape [2, E]
 
-
-        # Step 1: Add self-loops to the adjacency matrix.
-        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
-
-        edge_index = sort_edge_index(edge_index, sort_by_row=False)
-
         # Step 2: Linearly transform node feature matrix.
         x = self.lin(x)
 
