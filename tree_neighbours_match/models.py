@@ -24,7 +24,13 @@ def create_fully_adjacent_edges(num_nodes, num_trees):
 
 class GCN(nn.Module):
     def __init__(
-        self, input_dim, hidden_dim, output_dim, num_layers, use_fully_adj=False
+        self,
+        input_dim,
+        hidden_dim,
+        output_dim,
+        num_layers,
+        use_fully_adj=False,
+        mlp=False,
     ):
         super(GCN, self).__init__()
         self.use_fully_adj = use_fully_adj
@@ -39,7 +45,10 @@ class GCN(nn.Module):
 
         self.layers = nn.ModuleList()
         for _ in range(num_layers):
-            self.layers.append(GCNMLPConv(hidden_dim, hidden_dim))
+            if mlp:
+                self.layers.append(GCNMLPConv(hidden_dim, hidden_dim))
+            else:
+                self.layers.append(GCNConv(hidden_dim, hidden_dim))
 
         self.layer_norms = nn.ModuleList()
         for _ in range(num_layers):
