@@ -53,15 +53,34 @@ class GCN_regressor(nn.Module):
         return x
 
     def fully_adj_edges(self, x, batch):
-        # fully adjacent graph matrix based on batch
-        ajd_matrix = torch.zeros((x.size(0), x.size(0)), device=x.device)
+        # Get unique batch indices
+        unique_batches = batch.unique()
 
-        # set all matrix values to 1 when in the same batch
-        for b in batch.unique():
+        # Prepare lists to hold the edge indices
+        edge_indices = []
+
+        # Iterate over each unique batch
+        for b in unique_batches:
+            # Get the indices of the nodes in the current batch
             mask = batch == b
-            ajd_matrix = ajd_matrix + mask.int().view(-1, 1) * mask.int()
+            indices = mask.nonzero(as_tuple=True)[
+                0
+            ]  # Get the indices of the nodes in the batch
 
-        # convert to edge_index for pytprch geometric
-        edge_index = ajd_matrix.nonzero().t().contiguous()
+            # Create edges for the fully connected subgraph of the current batch
+            num_nodes = indices.size(0)
+            if num_nodes > 1:
+                # Create a fully connected graph for the current batch
+                row_indices = indices.repeat(num_nodes)
+                col_indices = indices.view(-1, 1).expand(-1, num_nodes).flatten()
+                edge_indices.append(torch.stack([row_indices, col_indices], dim=0))
+
+        # Concatenate all edge indices
+        if edge_indices:
+            edge_index = torch.cat(edge_indices, dim=1)
+        else:
+            edge_index = torch.empty(
+                (2, 0), dtype=torch.long, device=x.device
+            )  # No edges case
 
         return edge_index
