@@ -5,7 +5,7 @@ from torch_geometric.nn.pool import global_add_pool, global_mean_pool
 from torch_geometric.nn import GCNConv
 
 
-class GCN(nn.Module):
+class GCN_regressor(nn.Module):
     def __init__(
         self,
         input_dim,
@@ -15,7 +15,7 @@ class GCN(nn.Module):
         use_fully_adj=False,
         mlp=False,
     ):
-        super(GCN, self).__init__()
+        super(GCN_regressor, self).__init__()
         self.use_fully_adj = use_fully_adj
         self.num_layers = num_layers
 
@@ -41,6 +41,8 @@ class GCN(nn.Module):
         x = self.embedding_layer(x)  # Embed into 32-dimensional space
 
         for i, layer in enumerate(self.layers):
+            if self.use_fully_adj and i == len(self.layers) - 1:
+                edge_index = self.fully_adj_edges(x, batch)
             x_new = layer(x, edge_index)
             x_new = F.relu(x_new)
             x = x + x_new
@@ -49,3 +51,17 @@ class GCN(nn.Module):
         x = self.output_layer(x)
         x = global_mean_pool(x, batch)
         return x
+
+    def fully_adj_edges(self, x, batch):
+        # fully adjacent graph matrix based on batch
+        ajd_matrix = torch.zeros((x.size(0), x.size(0)), device=x.device)
+
+        # set all matrix values to 1 when in the same batch
+        for b in batch.unique():
+            mask = batch == b
+            ajd_matrix = ajd_matrix + mask.int().view(-1, 1) * mask.int()
+
+        # convert to edge_index for pytprch geometric
+        edge_index = ajd_matrix.nonzero().t().contiguous()
+
+        return edge_index
