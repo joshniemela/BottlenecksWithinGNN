@@ -3,4 +3,4 @@ __pycache__/
 .trunk/
 .ruff_cache/
 .vscode/
-/data/
+data/*
