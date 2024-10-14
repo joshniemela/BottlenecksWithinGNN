@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn.pool import global_add_pool, global_mean_pool
 from torch_geometric.nn import GCNConv
+from gcn_mlp import GCNMLPConv, GCNLSTMConv
 
 
 class GCN_regressor(nn.Module):
@@ -13,7 +14,7 @@ class GCN_regressor(nn.Module):
         output_dim,
         num_layers,
         use_fully_adj=False,
-        mlp=False,
+        aggregator_mode=None,
     ):
         super(GCN_regressor, self).__init__()
         self.use_fully_adj = use_fully_adj
@@ -23,8 +24,10 @@ class GCN_regressor(nn.Module):
 
         self.layers = nn.ModuleList()
         for _ in range(num_layers):
-            if mlp:
+            if aggregator_mode == "mlp":
                 self.layers.append(GCNMLPConv(hidden_dim, hidden_dim))
+            elif aggregator_mode == "lstm":
+                self.layers.append(GCNLSTMConv(hidden_dim, hidden_dim))
             else:
                 self.layers.append(GCNConv(hidden_dim, hidden_dim))
 
@@ -37,8 +40,7 @@ class GCN_regressor(nn.Module):
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
 
-        # Assuming x contains 5 features in the first 5 columns
-        x = self.embedding_layer(x)  # Embed into 32-dimensional space
+        x = self.embedding_layer(x)  # Embed
 
         for i, layer in enumerate(self.layers):
             if self.use_fully_adj and i == len(self.layers) - 1:
