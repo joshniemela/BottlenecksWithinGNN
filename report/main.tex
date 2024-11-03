@@ -94,6 +94,22 @@ We will also be creating and using synthetic datasets as this will give us more 
 	\item Construct a model, for instance, a transformer or CCNN~\cite{tdlbook}, that can learn topological features in data and benchmark against non-topological approaches.
 \end{enumerate}
 
+
+\section{Three-node GCN}
+
+To dip our toes into the over-squashing problem,
+we started out with a simple GCN model with three nodes and one layer.
+It has two parameters, one weight and one bias.
+
+The problem we wanted the model to solve, is what the sum of the children should be.
+For the unnormalised model, this is simply the sum of the children and 
+we get a weight of $\approx 1$ and a bias of $\approx 0$.
+SHOW RESULTS HERE
+
+For the normalised model, we get a weight of $\approx 1.72$ and a bias of $\approx 0$.
+This is due to the diagonal normalisation.
+
+
 \section{Tree neighbours-match}
 We decided to try to reproduce the over-squashing problem from \cite{alon_bottleneck_2021}.
 \subsection{Data}
@@ -118,7 +134,7 @@ For depths greater then 3, the number of unique trees grows to the point where t
 
 \subsection{Running the experiment} % tree neighbours-match
 
-Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more widely propose as a heuristic approach to deal with over-squashing. 
+Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more widely propose as a heuristic approach to deal with over-squashing.
 This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in Figure \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
 
 \begin{figure}[H]
@@ -137,12 +153,12 @@ The last fully adjacent layer connects every single node to the root, we can omi
 
 \subsection{Results} % tree neighbours-match
 
-The results of the tree neighbours-match experiment show that contrary to the findings in \cite{alon_bottleneck_2021}, the GCN with the fully adjacent last layer does not outperform the GCN model without the fully adjacent last layer. The results are consistent across all depths. This is an interesting result and motivates further investigation into the over-squashing problem on a more theoretical level rather than just heuristic, as it is difficult to draw any conclusions from our contradictory results alone. 
+The results of the tree neighbours-match experiment show that contrary to the findings in \cite{alon_bottleneck_2021}, the GCN with the fully adjacent last layer does not outperform the GCN model without the fully adjacent last layer. The results are consistent across all depths. This is an interesting result and motivates further investigation into the over-squashing problem on a more theoretical level rather than just heuristic, as it is difficult to draw any conclusions from our contradictory results alone.
 
 
 \section{MLP aggregate on GCN}
 \[
-h_v^{(k)} = \text{UPDATE}^{(k)} \left(MLP^{(k)}(\{ h_u^{(k-1)}: u \in \mathcal{N}(v) \cup v \}) \right)
+	h_v^{(k)} = \text{UPDATE}^{(k)} \left(MLP^{(k)}(\{ h_u^{(k-1)}: u \in \mathcal{N}(v) \cup v \}) \right)
 \]
 
 \printbibliography
