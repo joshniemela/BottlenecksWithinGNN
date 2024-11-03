@@ -11,8 +11,8 @@ def generate_three_nodes_dataset(n: int, device="cpu") -> list[Data]:
     # Our root node is set to 0, this is just to give us a neutral node
     node_values[:, 0] = 0
 
-    # Set the two side nodes to something between 0 and 100
-    node_values[:, 1:] = torch.randint(100, (n, 2))
+    # Set the two side nodes to something between 0 and 1000
+    node_values[:, 1:] = torch.randint(1000, (n, 2))
 
     node_values = node_values.reshape(n, 3, 1).float()
 

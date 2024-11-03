@@ -4,10 +4,11 @@ from torch_geometric.loader import DataLoader
 import torch
 
 import torch.optim as optim
+from torch.optim.adam import Adam
 
 # Hyperparameters
-learning_rate = 0.01
-num_epochs = 30
+learning_rate = 0.02
+num_epochs = 101
 
 
 # Training function
@@ -27,20 +28,37 @@ def train(model, data_loader, optimizer, criterion):
 # Main function
 def main():
     # Generate a dataset of 1000 graphs
-    data_list = generate_three_nodes_dataset(10000)
+    data_list = generate_three_nodes_dataset(1000)
     data = DataLoader(data_list, batch_size=512, shuffle=True)
 
     # Create model
     model = GCN()
 
     # Define optimizer and loss function
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.MSELoss()
 
+    print("Training model without normalisation...")
     # Training loop
     for epoch in range(num_epochs):
         loss = train(model, data, optimizer, criterion)
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
+
+    # print model parameters
+    print("Model parameters:")
+    for name, param in model.named_parameters():
+        print(name, param)
+
+    model = GCN(normalise=True)
+    optimizer = Adam(model.parameters(), lr=learning_rate)
+    criterion = torch.nn.MSELoss()
+
+    print("Training model with normalisation...")
+    for epoch in range(num_epochs):
+        loss = train(model, data, optimizer, criterion)
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
 
     # print model parameters
     print("Model parameters:")
