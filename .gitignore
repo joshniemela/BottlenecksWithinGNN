@@ -3,4 +3,5 @@ __pycache__/
 .trunk/
 .ruff_cache/
 .vscode/
+<<<<<<< HEAD
 data/*
