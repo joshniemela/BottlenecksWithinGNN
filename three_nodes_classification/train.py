@@ -36,7 +36,7 @@ def main():
 
     # Define optimizer and loss function
     optimizer = Adam(model.parameters(), lr=learning_rate)
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.CrossEntropyLoss()
 
     print("Training model without normalisation...")
     # Training loop
@@ -52,7 +52,7 @@ def main():
 
     model = GCN(normalise=True)
     optimizer = Adam(model.parameters(), lr=learning_rate)
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.CrossEntropyLoss()
 
     print("Training model with normalisation...")
     for epoch in range(num_epochs):
