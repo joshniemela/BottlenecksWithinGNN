@@ -1,5 +1,5 @@
 from dataset import generate_three_nodes_dataset
-from models import GCN
+from models import GCN, SAGE, NonLinearSAGE
 from torch_geometric.loader import DataLoader
 import torch
 
@@ -8,7 +8,7 @@ from torch.optim.adam import Adam
 
 # Hyperparameters
 learning_rate = 0.02
-num_epochs = 200
+num_epochs = 100
 
 
 # Training function
@@ -38,7 +38,7 @@ def main():
     optimizer = Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss()
 
-    print("Training model without normalisation...")
+    print("Training model with GCN...")
     # Training loop
     for epoch in range(num_epochs):
         loss = train(model, data, optimizer, criterion)
@@ -50,11 +50,34 @@ def main():
     for name, param in model.named_parameters():
         print(name, param)
 
-    model = GCN(normalise=True)
+        # Create model
+    model = SAGE()
+
+    # Define optimizer and loss function
     optimizer = Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss()
 
-    print("Training model with normalisation...")
+    print("Training model with SAGE...")
+    # Training loop
+    for epoch in range(num_epochs):
+        loss = train(model, data, optimizer, criterion)
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
+
+    # print model parameters
+    print("Model parameters:")
+    for name, param in model.named_parameters():
+        print(name, param)
+
+        # Create model
+    model = NonLinearSAGE()
+
+    # Define optimizer and loss function
+    optimizer = Adam(model.parameters(), lr=learning_rate)
+    criterion = torch.nn.CrossEntropyLoss()
+
+    print("Training model with Nonlinear SAGE...")
+    # Training loop
     for epoch in range(num_epochs):
         loss = train(model, data, optimizer, criterion)
         if epoch % 10 == 0:
