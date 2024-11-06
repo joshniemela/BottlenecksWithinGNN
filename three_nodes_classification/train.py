@@ -3,7 +3,6 @@ from models import GCN, SAGE, NonLinearSAGE
 from torch_geometric.loader import DataLoader
 import torch
 
-import torch.optim as optim
 from torch.optim.adam import Adam
 
 # Hyperparameters
@@ -22,13 +21,14 @@ def train(model, data_loader, optimizer, criterion):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
+
     return total_loss / len(data_loader)
 
 
 # Main function
 def main():
     # Generate a dataset of 1000 graphs
-    data_list = generate_three_nodes_dataset(1000)
+    data_list = generate_three_nodes_dataset(5000)
     data = DataLoader(data_list, batch_size=512, shuffle=True)
 
     # Create model
@@ -50,7 +50,19 @@ def main():
     for name, param in model.named_parameters():
         print(name, param)
 
-        # Create model
+        # print the accuracy of the model
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch in data:
+            outputs = model(batch)
+            predicted = (outputs > 0.5).float()
+            total += batch.y.size(0)
+            correct += (predicted == batch.y).sum().item()
+
+    print(f"Accuracy of the model: {100 * correct / total} %")
+
+    # Create model
     model = SAGE()
 
     # Define optimizer and loss function
@@ -69,7 +81,19 @@ def main():
     for name, param in model.named_parameters():
         print(name, param)
 
-        # Create model
+    # print the accuracy of the model
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch in data:
+            outputs = model(batch)
+            predicted = (outputs > 0.5).float()
+            total += batch.y.size(0)
+            correct += (predicted == batch.y).sum().item()
+
+    print(f"Accuracy of the model: {100 * correct / total} %")
+
+    # Create model
     model = NonLinearSAGE()
 
     # Define optimizer and loss function
@@ -87,6 +111,18 @@ def main():
     print("Model parameters:")
     for name, param in model.named_parameters():
         print(name, param)
+
+    # print the accuracy of the model
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch in data:
+            outputs = model(batch)
+            predicted = (outputs > 0.5).float()
+            total += batch.y.size(0)
+            correct += (predicted == batch.y).sum().item()
+
+    print(f"Accuracy of the model: {100 * correct / total} %")
 
 
 if __name__ == "__main__":
