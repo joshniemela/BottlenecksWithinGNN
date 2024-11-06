@@ -99,15 +99,60 @@ We will also be creating and using synthetic datasets as this will give us more 
 
 To dip our toes into the over-squashing problem,
 we started out with a simple GCN model with three nodes and one layer.
-It has two parameters, one weight and one bias.
+The GCN layer has exactly one parameter which is the coeffecient in the aggregation step, we have one parameter since we have only one output feature because all node connections, including self-connections, are aggregated in the same manner.
+The update and aggregate function with normalisation enabled is described below. The trainable parameter is \(\Theta\).
+\begin{equation}
+  \mathbf{x}_i' = \Theta \sum_{j \in \mathcal{N}(v) \cup \{i\}} \frac{e_{j,i}}{\sqrt{\hat{d}_j \hat{d}_i}} \mathbf{x}_j
+\end{equation}
 
-The problem we wanted the model to solve, is what the sum of the children should be.
-For the unnormalised model, this is simply the sum of the children and 
-we get a weight of $\approx 1$ and a bias of $\approx 0$.
-SHOW RESULTS HERE
+The formula without normalisation is identical, albeit without the diagonal degree matrix term:
+\begin{equation}
+  \mathbf{x}_i' = \Theta \sum_{j \in \mathcal{N}(v) \cup \{i\}} e_{j,i} \mathbf{x}_j
+\end{equation}
 
-For the normalised model, we get a weight of $\approx 1.72$ and a bias of $\approx 0$.
-This is due to the diagonal normalisation.
+Our dataset / problem is a graph of three nodes, with two children pointing into the root node. The root node is set to 0 (\(x_{1}=0\)) and the children have some random integer, the target is the sum of the entire graph. The readout is only done by reading the root node values.
+\begin{figure}[H]
+  \centering
+\begin{tikzpicture}
+  % Define the nodes
+  \node[circle, draw] (0) at (0, 0) {$x_{1}$};
+  \node[circle, draw] (1) at (-1, 1) {$x_2$};
+  \node[circle, draw] (2) at (1, 1) {$x_3$};
+
+  % Draw the arrows
+  \draw[->] (1) -- (0);
+  \draw[->] (2) -- (0);
+\end{tikzpicture}
+\end{figure}
+Algebraically, this problem is solved by
+\begin{equation}
+x_{1}' = x_{2}+x_{3} \label{three_node_solution}
+\end{equation}
+
+
+We first compute what the learnable parameter should be with, and without normalisation, and then we try to train the model and verify that we get the expected weights.
+
+Our edge weights are fixed to 1, which means all edges have equal weighting, \(e_{j, i}=1\) Since we only do one graph convolution towards the root, we can disregard the updates for the two children nodes and only look at the update that affects the root, which means we can set \(i=1\).
+
+This gives us the simplest problem we could conceive, a linear function with one parameter:
+\begin{align}
+  \mathbf{x}_1' &= \Theta \sum_{j \in \mathcal{N}(v) \cup \{1\}} \mathbf{x}_j,\ \Theta \in \mathbb{R}\\
+   &= \Theta (x_{1} + x_{2} + x_{3})\\
+                &= \Theta (x_{2} + x_{3})\\
+  \intertext{We observe that fixing \(\Theta=1\) yields eq (\ref{three_node_solution}):}
+                  &= x_{2} + x_{3}
+\end{align}
+
+Next, we do the same for the normalised example, $\hat{d}_{i}$ is the number of neighbours of node $i$ plus one. This means, we have $\hat{d}_{2} = \hat{d}_{3} = 1$ and $\hat{d}_{1}=3$.
+\begin{align}
+  \mathbf{x}_1' &= \Theta \sum_{j \in \mathcal{N}(v) \cup \{i\}} \frac{1}{\sqrt{\hat{d}_j \hat{d}_i}} \mathbf{x}_j\\
+  &= \Theta  \left( \frac{1}{\sqrt{\hat{d}_2 \hat{d}_1}} \mathbf{x}_2 +  \frac{1}{\sqrt{\hat{d}_3 \hat{d}_1}} \mathbf{x}_3 \right)\\
+  &= \Theta  \left( \frac{1}{\sqrt{1 \cdot 3}} \mathbf{x}_2 +  \frac{1}{\sqrt{1 \cdot 3}} \mathbf{x}_3 \right)\\
+  &= \frac{\Theta}{\sqrt{3}}  \left(  \mathbf{x}_2 +   \mathbf{x}_3 \right) \implies \theta = \sqrt{3} \approx 1.732\\
+\end{align}
+
+SHOW RESULTS HERE (
+Homework for Mustafa)
 
 
 \section{Tree neighbours-match}
