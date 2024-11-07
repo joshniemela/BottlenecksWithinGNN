@@ -97,16 +97,17 @@ We will also be creating and using synthetic datasets as this will give us more 
 
 \section{Three-node GCN}
 
-To dip our toes into the over-squashing problem,
-we started out with a simple GCN model with three nodes and one layer.
-The GCN layer has exactly one parameter which is the coeffecient in the aggregation step, we have one parameter since we have only one output feature because all node connections, including self-connections, are aggregated in the same manner.
-The update and aggregate function with normalisation enabled is described below. The trainable parameter is \(\Theta\).
+To dip our toes into Graph Neural Netowrks and eventually the over-squashing problem,
+we started out with a simple GCN model with one layer and one input channel (each node has only one feature).
+Since the GCN aggregates all node connections, including self-connections with the same coeffecient, the GCN layer has exactly one parameter.
+The update and aggregate function with normalisation enabled is described in eq \ref{GCN_AGG_W_NORM}. The trainable parameter is \(\Theta\).
 \begin{equation}
   \mathbf{x}_i' = \Theta \sum_{j \in \mathcal{N}(v) \cup \{i\}} \frac{e_{j,i}}{\sqrt{\hat{d}_j \hat{d}_i}} \mathbf{x}_j
+  \label{GCN_AGG_W_NORM}
 \end{equation}
 
-The formula without normalisation is identical, albeit without the diagonal degree matrix term:
-\begin{equation}
+The formula without normalisation in \ref{GCN_AGG} is identical, albeit without the diagonal degree matrix term.
+\begin{equation} \label{GCN_AGG}
   \mathbf{x}_i' = \Theta \sum_{j \in \mathcal{N}(v) \cup \{i\}} e_{j,i} \mathbf{x}_j
 \end{equation}
 
@@ -123,24 +124,25 @@ Our dataset / problem is a graph of three nodes, with two children pointing into
   \draw[->] (1) -- (0);
   \draw[->] (2) -- (0);
 \end{tikzpicture}
+\label{fig:three_node_graph}
+\caption{The three-node graph}
 \end{figure}
+
 Algebraically, this problem is solved by
 \begin{equation}
 x_{1}' = x_{2}+x_{3} \label{three_node_solution}
 \end{equation}
 
 
-We first compute what the learnable parameter should be with, and without normalisation, and then we try to train the model and verify that we get the expected weights.
+We first compute what the learnable parameter should be with, and without normalisation, and then we try to train the model and verify that we get the expected weights. The motivation behind this is to construct the simplest possible GNN problem and to solve it both by hand and computationally to understand how the GCN model works and how it learns.
 
-Our edge weights are fixed to 1, which means all edges have equal weighting, \(e_{j, i}=1\) Since we only do one graph convolution towards the root, we can disregard the updates for the two children nodes and only look at the update that affects the root, which means we can set \(i=1\).
+Our edge weights are fixed to 1, which means all edges have equal weighting, \(e_{j, i}=1\) in eq \ref{GCN_AGG}. Since we only do one graph convolution towards the root, we can disregard the updates for the two children nodes and only look at the update that affects the root, which means we can set \(i=1\) as well in eq \ref{GCN_AGG}.
 
-This gives us the simplest problem we could conceive, a linear function with one parameter:
-\begin{align}
+This leaves us with a linear function with one parameter as can be seen in eq \ref{three_node_solution}.
+\begin{align} \label{three_node_solution}
   \mathbf{x}_1' &= \Theta \sum_{j \in \mathcal{N}(v) \cup \{1\}} \mathbf{x}_j,\ \Theta \in \mathbb{R}\\
-   &= \Theta (x_{1} + x_{2} + x_{3})\\
-                &= \Theta (x_{2} + x_{3})\\
-  \intertext{We observe that fixing \(\Theta=1\) yields eq (\ref{three_node_solution}):}
-                  &= x_{2} + x_{3}
+   &= \Theta (x_{1} + x_{2} + x_{3}) \quad \text{note that } x_{1} = 0\\
+                &= \Theta (x_{2} + x_{3}) \implies \Theta = 1
 \end{align}
 
 Next, we do the same for the normalised example, $\hat{d}_{i}$ is the number of neighbours of node $i$ plus one. This means, we have $\hat{d}_{2} = \hat{d}_{3} = 1$ and $\hat{d}_{1}=3$.
@@ -154,14 +156,15 @@ Next, we do the same for the normalised example, $\hat{d}_{i}$ is the number of 
 SHOW RESULTS HERE (
 Homework for Mustafa)
 
-Next, we tried a slightly more complex problem, again graphs of size 3 in the same shape. But this time we want to classify if $x_{1} = x_{2}+x_{3}$ is true or not for the given graph.
+Next, we tried a classification problem, which also turned out to be slightly more complex. We reused the same graph. But this time we want to classify if $x_{1} = x_{2}+x_{3}$ is true or not for the given graph. \(x_2, x_3\) are integers sampled from a uniform distribution in the range \([0, 10[\). Half of the generated graphs will have the property that \(x_{1} = x_{2}+x_{3}\) and the other half \(x_1\) is a random integer in the range \([0, 20[\).
 
-We tried with the same GCN model, here we got an accuracy of 48.5\%. It was unable to
-learn the data.
+We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classe, we can conclude that the model has not the objective function.
 
-Then we tried using a SAGE model, this is the same as the GCN model but with 
-an additional weight parameter for the self-loop, we also gave it a bias parameter. We got an accuracy of 53\%.
-This slight improvement is due to the fact that it is able to learn how to subtract the self-loop from the neighbours. It therefore learns to output the correct answer if it is correct, but will be wrong in most of the cases that are either above or below depending on the final weights.
+The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Hence the self loop needs a separate weight parameter.
+
+Hence we tried using a SAGE model, this is the same as the GCN model but with
+an additional weight parameter for the self-loop, we also gave it a bias parameter. We got an accuracy of 53\%. % aber why do we give it a bias parameter?
+This is not much better than the GCN model.
 
 The models fail to learn since we have no non-linearity in the model. We need some behaviour
 that allows the model to learn that the further away from 0 the difference is,
