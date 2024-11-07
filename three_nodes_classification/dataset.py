@@ -14,9 +14,9 @@ def generate_three_nodes_dataset(n: int, device="cpu") -> list[Data]:
     # Set the root node to the sum of the two side nodes
     node_values[:, 0] = torch.sum(node_values[:, 1:], 1)
 
-    # we replace half of the values with random values
+    # we replace half of the root values with random values
     mask = torch.rand(n) > 0.5
-    node_values[mask, :] = torch.randint(10 * 2 - 1, (torch.sum(mask), 3)).float()
+    node_values[mask, 0] = torch.randint(10 * 2 - 1, (mask.sum(),)).float()
 
     # We need to reshape the tensor to have the correct shape
     node_values = node_values.reshape(n, 3, 1)

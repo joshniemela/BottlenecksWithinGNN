@@ -6,8 +6,10 @@ import torch
 from torch.optim.adam import Adam
 
 # Hyperparameters
-learning_rate = 0.02
+learning_rate = 0.01
 num_epochs = 100
+samples = 1000
+batch_size = 64
 
 
 # Training function
@@ -28,8 +30,8 @@ def train(model, data_loader, optimizer, criterion):
 # Main function
 def main():
     # Generate a dataset of 1000 graphs
-    data_list = generate_three_nodes_dataset(5000)
-    data = DataLoader(data_list, batch_size=512, shuffle=True)
+    data_list = generate_three_nodes_dataset(samples)
+    data = DataLoader(data_list, batch_size=batch_size, shuffle=True)
 
     # Create model
     model = GCN()
@@ -106,6 +108,10 @@ def main():
         loss = train(model, data, optimizer, criterion)
         if epoch % 10 == 0:
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
+            # print model parameters
+            print("Model parameters:")
+            for name, param in model.named_parameters():
+                print(name, param)
 
     # print model parameters
     print("Model parameters:")
