@@ -156,6 +156,24 @@ Homework for Mustafa)
 
 Next, we tried a slightly more complex problem, again graphs of size 3 in the same shape. But this time we want to classify if $x_{1} = x_{2}+x_{3}$ is true or not for the given graph.
 
+We tried with the same GCN model, here we got an accuracy of 48.5\%. It was unable to
+learn the data.
+
+Then we tried using a SAGE model, this is the same as the GCN model but with 
+an additional weight parameter for the self-loop, we also gave it a bias parameter. We got an accuracy of 53\%.
+This slight improvement is due to the fact that it is able to learn how to subtract the self-loop from the neighbours. It therefore learns to output the correct answer if it is correct, but will be wrong in most of the cases that are either above or below depending on the final weights.
+
+The models fail to learn since we have no non-linearity in the model. We need some behaviour
+that allows the model to learn that the further away from 0 the difference is,
+the more likely it is that the children nodes don't sum to the root node.
+Therefore, we want a function that maps 0 to 1 and values further away from 0 to 0. 
+For this, we simply chose the gaussian function \(e^{-x^2}\) which we
+appended to the readout of the model. With this we get perfect results with an
+accuracy of 100\%.
+
+
+
+
 
 \section{Tree neighbours-match}
 We decided to try to reproduce the over-squashing problem from \cite{alon_bottleneck_2021}.
