@@ -6,7 +6,10 @@ from dataset import generate_three_nodes_dataset
 from models import GCN, SAGE, NonLinearSAGE
 from torch_geometric.loader import DataLoader
 import matplotlib
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
+matplotlib.use('pgf')
+import os
+print(os.environ["PATH"])
 
 def print_model_parameters(model):
     for name, param in model.named_parameters():
@@ -17,8 +20,8 @@ data_list = generate_three_nodes_dataset(300)
 data_loader = DataLoader(data_list, batch_size=1028, shuffle=True)
 
 # Create a grid of w1 and w2 values
-w1_range = np.linspace(-3, 3,200)
-w2_range = np.linspace(-3, 3, 200)
+w1_range = np.linspace(-1, 1, 50)
+w2_range = np.linspace(-1, 1, 50)
 W1, W2 = np.meshgrid(w1_range, w2_range)
 
 # Initialize your model
@@ -53,7 +56,7 @@ ax.set_zlabel('Loss')
 ax.set_title('3D Loss Surface')
 
 # high resolution plot
-plt.savefig('loss_3d.png', dpi=900)
+plt.savefig('loss_3d.pgf', dpi=900)
 
-plt.ion()
+# plt.ion()
 plt.show(block=True)

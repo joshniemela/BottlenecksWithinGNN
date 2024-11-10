@@ -4,9 +4,9 @@ from torch_geometric.nn.conv import GCNConv, SAGEConv
 
 
 class GCN(nn.Module):
-    def __init__(self, normalise=False):
+    def __init__(self, normalise=False, bias=True):
         super(GCN, self).__init__()
-        self.conv = GCNConv(1, 1, normalize=normalise, bias=True)
+        self.conv = GCNConv(1, 1, normalize=normalise, bias=bias)
 
     def forward(self, data):
         x, edge_index, _ = data.x, data.edge_index, data.batch
