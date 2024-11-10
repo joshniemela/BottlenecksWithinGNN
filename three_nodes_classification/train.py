@@ -71,15 +71,15 @@ def main(model_type='GCN', normalise=False, samples=1000, batch_size=64, learnin
         accuracies.append(accuracy)
         print(f"Run {run+1}/{num_runs}, Accuracy: {accuracy:.2f}%")
 
+        # prinitng the model parameters
+        for name, param in model.named_parameters():
+            print(name, param)
+
     # Metrics computation
     mean_accuracy = sum(accuracies) / len(accuracies)
     median_accuracy = sorted(accuracies)[len(accuracies) // 2]
     std_dev_accuracy = torch.std(torch.tensor(accuracies)).item()
 
-    # parameters of the final model
-    print("\nModel Parameters:")
-    for name, param in model.named_parameters():
-        print(name, param)
 
     print("\nFinal Metrics Across Multiple Runs:")
     print(f"Best Accuracy: {max(accuracies):.2f}%")
