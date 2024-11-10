@@ -1,0 +1,7 @@
+#!/bin/bash
+#SBATCH --partition=modi_short
+#SBATCH --cpus-per-task=2
+
+
+
+srun apptainer exec ~/modi_images/ucphhpc/slurm-notebook:23.11.9 /home/cvd306_ku_dk/modi_mount/tree_neighbours_match/run_agents.sh 
