@@ -175,9 +175,6 @@ appended to the readout of the model. With this we get perfect results with an
 accuracy of 100\%.
 
 
-
-
-
 \section{Tree neighbours-match}
 We decided to try to reproduce the over-squashing problem from \cite{alon_bottleneck_2021}.
 \subsection{Data}
@@ -188,7 +185,7 @@ The $V \in \mathbb{N}^{2 \times n}$ contain our attributes for the nodes. All no
 The root has a random number of leaves between $1$ and $2^{d}$. The nodes in the last layer are sampled to have a random number of leaves between $1$ and $2^{d}$ without replacement. All nodes between depth $1$ to $d-1$ are set to have 0 leaves. The label for the dataset is then finally set to be the class whose leaves match the number of leaves of the root. Note that the edge matrix is 1-indexed and the attribute matrix is 0-indexed for ease of notation.
 
 NOTE:
-Our tree neighbours using the approximation fr birthday problem has almost 0 likelihood for collisions between test and train
+Our tree neighbours using the approximation for birthday problem has almost 0 likelihood for collisions between test and train
 
 
 \section{NOTES FROM RESEARCH THAT HAVE NOT BEEN ORGANISED!}
@@ -206,10 +203,10 @@ Although in \cite{alon_bottleneck_2021}, the authors present their findings on t
 This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in Figure \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
 
 \begin{figure}[H]
-	\centering
-	\input{tree_experiment_graph.tex}
-	\caption{The results of the tree neighbours-match experiment.}
-	\label{fig:tree_experiment_graph}
+  \centering
+  \input{tree_experiment_graph.tex}
+  \caption{The results of the tree neighbours-match experiment.}
+  \label{fig:tree_experiment_graph}
 \end{figure}
 
 \section{Model architecture} % tree neighbours-match
@@ -228,7 +225,7 @@ The results of the tree neighbours-match experiment show that contrary to the fi
 \[
 	h_v^{(k)} = \text{UPDATE}^{(k)} \left(MLP^{(k)}(\{ h_u^{(k-1)}: u \in \mathcal{N}(v) \cup v \}) \right)
 \]
+The results of the tree neighbours-match experiment show that contrary to the findings in \cite{alon_bottleneck_2021}, the GCN with the fully adjacent last layer does not outperform the GCN model without the fully adjacent last layer. The results are consistent across all depths. This is an interesting result and motivates further investigation into the over-squashing problem on a more theoretical level rather than just heuristic, as it is difficult to draw any conclusions from our contradictory results alone. 
 
 \printbibliography
-
 \end{document}

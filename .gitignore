@@ -3,8 +3,9 @@ __pycache__/
 .trunk/
 .ruff_cache/
 .vscode/
-/data/
 data/processed/data_v3.pt
 data/processed/pre_filter.pt
 data/processed/pre_transform.pt
 data/raw/qm9_v3.pt
+data/
+*.png
