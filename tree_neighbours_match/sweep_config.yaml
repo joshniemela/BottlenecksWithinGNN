@@ -11,24 +11,26 @@ parameters:
   tree_depth:
     values: [2, 3, 4, 5]
   num_trees:
-    values: [40000]
+    values: [40000, 80000]
   max_epochs:
     values: [50000]
   lr:
-    values: [0.01, 0.001]
+    values: [0.01]
   batch_size:
-    values: [2048]
+    values: [2048, 3072]
   hidden_dim:
     values: [32]
   early_stop_patience:
-    values: [20]
+    values: [25]
   early_stop_grace_period:
-    values: [20]
+    values: [100]
   stopping_threshold:
     values: [0.0001]
   scheduler_factor:
-    values: [0.5]
+    values: [0.9]
   scheduler_patience:
-    values: [10]
+    values: [20]
   fully_adjacent_last_layer:
     values: [false, true]
+  mlp_aggregation:
+    values: [true, false]

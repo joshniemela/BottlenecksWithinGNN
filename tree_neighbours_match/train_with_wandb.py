@@ -31,6 +31,7 @@ def train_eval_gcn_with_wandb():
         2**wandb.config.tree_depth + 1,
         wandb.config.tree_depth + 1,  # number of layers
         use_fully_adj=wandb.config.fully_adjacent_last_layer,
+        mlp=wandb.config.mlp_aggregation,
     ).to(device)
 
     # Prepare data (replace with actual data loading mechanism)
