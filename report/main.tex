@@ -97,7 +97,7 @@ We will also be creating and using synthetic datasets as this will give us more 
 
 \section{Three-node GCN}
 
-To dip our toes into Graph Neural Networks and eventually the over-squashing problem,
+To dip our toes into Graph Neural Netowrks and eventually the over-squashing problem,
 we started out with a simple GCN model with one layer and one input channel (each node has only one feature).
 Since the GCN aggregates all node connections, including self-connections with the same coeffecient, the GCN layer has exactly one parameter.
 The update and aggregate function with normalisation enabled is described in eq \ref{GCN_AGG_W_NORM}. The trainable parameter is \(\Theta\).
@@ -158,11 +158,12 @@ Homework for Mustafa)
 
 Next, we tried a classification problem, which also turned out to be slightly more complex. We reused the same graph. But this time we want to classify if $x_{1} = x_{2}+x_{3}$ is true or not for the given graph. \(x_2, x_3\) are integers sampled from a uniform distribution in the range \([0, 10[\). Half of the generated graphs will have the property that \(x_{1} = x_{2}+x_{3}\) and the other half \(x_1\) is a random integer in the range \([0, 20[\).
 
+=======
 We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classes, we can conclude that the model has not managed to learn the objective function.
 
-The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Thus, the self loop needs a separate weight parameter.
+The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Hence the self loop needs a separate weight parameter.
 
-We then used a SAGE model, this is the same as the GCN model but with
+Hence we tried using a SAGE model, this is the same as the GCN model but with
 an additional weight parameter for the self-loop, we also gave it a bias parameter. We got an accuracy of 53\%. % aber why do we give it a bias parameter?
 This is not much better than the GCN model.
 
@@ -175,6 +176,20 @@ appended to the readout of the model. With this we get perfect results with an
 accuracy of 100\%. On the downside, this model is very likely to not converge to an optimal solution: SHOW PLOT.
 
 We then used the function \(1-x^{2}\) which we composed with the readout. This was also able to get perfect accuracy but it was much more stable and only in rare cases it would result in a suboptimal solution of >95\%.
+accuracy of 100\%.
+
+Even still we notice that our model is really unstable, most of the time, it never converges on a solution. Since it only has two parameters, we can actually plot the loss function in 3D and analytically investigate the issue. As can be seen on figure \ref{fig:loss_surface}, there are two local minima, in the quadrant where the model parameters are both negative and positive. 
+
+
+\begin{figure}[H]
+  \centering
+  \input{loss_3d.pgf}
+  \caption{The loss surface of the three-node graph classification problem.}
+  \label{fig:loss_surface}
+\end{figure}
+
+
+
 
 \section{Tree neighbours-match}
 We decided to try to reproduce the over-squashing problem from \cite{alon_bottleneck_2021}.
