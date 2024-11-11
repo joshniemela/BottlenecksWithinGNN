@@ -97,7 +97,7 @@ We will also be creating and using synthetic datasets as this will give us more 
 
 \section{Three-node GCN}
 
-To dip our toes into Graph Neural Netowrks and eventually the over-squashing problem,
+To dip our toes into Graph Neural Networks and eventually the over-squashing problem,
 we started out with a simple GCN model with one layer and one input channel (each node has only one feature).
 Since the GCN aggregates all node connections, including self-connections with the same coeffecient, the GCN layer has exactly one parameter.
 The update and aggregate function with normalisation enabled is described in eq \ref{GCN_AGG_W_NORM}. The trainable parameter is \(\Theta\).
@@ -158,11 +158,11 @@ Homework for Mustafa)
 
 Next, we tried a classification problem, which also turned out to be slightly more complex. We reused the same graph. But this time we want to classify if $x_{1} = x_{2}+x_{3}$ is true or not for the given graph. \(x_2, x_3\) are integers sampled from a uniform distribution in the range \([0, 10[\). Half of the generated graphs will have the property that \(x_{1} = x_{2}+x_{3}\) and the other half \(x_1\) is a random integer in the range \([0, 20[\).
 
-We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classe, we can conclude that the model has not the objective function.
+We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classes, we can conclude that the model has not managed to learn the objective function.
 
-The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Hence the self loop needs a separate weight parameter.
+The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Thus, the self loop needs a separate weight parameter.
 
-Hence we tried using a SAGE model, this is the same as the GCN model but with
+We then used a SAGE model, this is the same as the GCN model but with
 an additional weight parameter for the self-loop, we also gave it a bias parameter. We got an accuracy of 53\%. % aber why do we give it a bias parameter?
 This is not much better than the GCN model.
 
@@ -172,8 +172,9 @@ the more likely it is that the children nodes don't sum to the root node.
 Therefore, we want a function that maps 0 to 1 and values further away from 0 to 0. 
 For this, we simply chose the gaussian function \(e^{-x^2}\) which we
 appended to the readout of the model. With this we get perfect results with an
-accuracy of 100\%.
+accuracy of 100\%. On the downside, this model is very likely to not converge to an optimal solution: SHOW PLOT.
 
+We then used the function \(1-x^{2}\) which we composed with the readout. This was also able to get perfect accuracy but it was much more stable and only in rare cases it would result in a suboptimal solution of >95\%.
 
 \section{Tree neighbours-match}
 We decided to try to reproduce the over-squashing problem from \cite{alon_bottleneck_2021}.
@@ -228,19 +229,6 @@ The results of the tree neighbours-match experiment show that contrary to the fi
 The results of the tree neighbours-match experiment show that contrary to the findings in \cite{alon_bottleneck_2021}, the GCN with the fully adjacent last layer does not outperform the GCN model without the fully adjacent last layer. The results are consistent across all depths. This is an interesting result and motivates further investigation into the over-squashing problem on a more theoretical level rather than just heuristic, as it is difficult to draw any conclusions from our contradictory results alone. 
 
 
-
-\section{NOTES FROM RESEARCH THAT HAVE NOT BEEN ORGANISED!}
-
-We reproduced the ``tree neighbours-match'' dataset from BOTTLENECK SOURCE.
-The dataset is a made of full balanced binary trees. Each node has two values, a class and a number of ``leaves''. All nodes that aren't part of the bottom layer have a class of 0 or ``unspecified''. Each node in the bottom layer are labelled incrementally, so the leftmost child is class 1 and the rightmost child is $2^{d}$ and a unique number of leaves. The root has an unspecified class and a unique number of leaves that corresponds to one of the bottom nodes. The task is then for the network to figure out what class the root pairs up from the bottom layer.
-
-These balanced binary trees are directed graphs pointing up towards the root.
-
-For each given depth $d$, we have $2^{d}! \cdot 2^{d}$ ($2^{d}!$ permutations of the bottom layer, $2^{d}$ possible root labels) possible trees / samples. We notice this means that for $d=2$ and $d=3$, we only get $96$ and $322560$ unique trees respectively.
-We sample from this dataset by generating a binary tree, then creating a permutation of the unique number of leaves and then randomly picking a class that the root should mimic.
-
-By the birthday paradox, we know this means these depths will very likely contain duplicate entries in the train and test data. Since they are both sampled IID this means it will not result in overfitting. In the event that the model has perfectly learnt the training data which contains all possible unique entries, we know that any future samples we throw at the model will also just contain the same entries we can classify.
-For depths greater then 3, the number of unique trees grows to the point where the likelihood of duplicate entries goes towards 0.
 
 
 
