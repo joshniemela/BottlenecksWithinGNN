@@ -8,4 +8,5 @@ data/processed/pre_filter.pt
 data/processed/pre_transform.pt
 data/raw/qm9_v3.pt
 data/
+.direnv
 *.png
