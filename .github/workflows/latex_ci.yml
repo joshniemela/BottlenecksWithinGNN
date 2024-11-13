@@ -4,6 +4,11 @@ on:
     paths:
       - ".github/workflows/latex_ci.yml"
       - "report/**"
+    branches:
+      - main
+
+permissions:
+  contents: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -20,8 +25,12 @@ jobs:
         with:
           root_file: main.tex
           working_directory: report/
-      - name: Upload PDF file
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: PDF
-          path: main.pdf
+          files: report/main.pdf
+          name: Latest Report
+          tag_name: latest-report
+          body: Automatically generated report from latest main branch commit
+          draft: false
+          prerelease: false
