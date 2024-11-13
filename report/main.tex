@@ -47,13 +47,10 @@
 }
 \date{\today}
 
-
 \begin{document}
 
 
 \maketitle
-
-
 
 \section{Introduction}
 
@@ -158,7 +155,6 @@ Homework for Mustafa)
 
 Next, we tried a classification problem, which also turned out to be slightly more complex. We reused the same graph. But this time we want to classify if $x_{1} = x_{2}+x_{3}$ is true or not for the given graph. \(x_2, x_3\) are integers sampled from a uniform distribution in the range \([0, 10[\). Half of the generated graphs will have the property that \(x_{1} = x_{2}+x_{3}\) and the other half \(x_1\) is a random integer in the range \([0, 20[\).
 
-=======
 We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classes, we can conclude that the model has not managed to learn the objective function.
 
 The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Hence the self loop needs a separate weight parameter.
@@ -179,7 +175,6 @@ We then used the function \(1-x^{2}\) which we composed with the readout. This w
 accuracy of 100\%.
 
 Even still we notice that our model is really unstable, most of the time, it never converges on a solution. Since it only has two parameters, we can actually plot the loss function in 3D and analytically investigate the issue. As can be seen on figure \ref{fig:loss_surface}, there are two local minima, in the quadrant where the model parameters are both negative and positive. 
-
 
 \begin{figure}[H]
   \centering
