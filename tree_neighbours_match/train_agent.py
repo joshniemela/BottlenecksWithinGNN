@@ -20,7 +20,7 @@ import argparse
 device = "cuda" if cuda.is_available() else "cpu"
 
 # Debugger is more happy if we use the CPU
-#device = "cpu"
+# device = "cpu"
 
 
 def train_eval_model(

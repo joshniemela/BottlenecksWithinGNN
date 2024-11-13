@@ -3,7 +3,6 @@ from models import GCN
 from torch_geometric.loader import DataLoader
 import torch
 
-import torch.optim as optim
 from torch.optim.adam import Adam
 import argparse
 
@@ -52,7 +51,7 @@ def main(normalize=False):
             loss = train(model, data, optimizer, criterion)
             if epoch % 50 == 0:
                 print(f"Epoch {epoch}/{num_epochs}, Loss: {loss:.4f}")
-        
+
         # Calculate the MSE loss on the test data
         total_loss = 0
         with torch.no_grad():
@@ -74,8 +73,13 @@ def main(normalize=False):
     print(f"Median MSE loss of the model: {sorted(mse_losses)[len(mse_losses) // 2]}")
     print(f"Standard deviation of the MSE loss: {torch.std(torch.tensor(mse_losses))}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a GCN model on a three nodes dataset")
-    parser.add_argument('--normalize', action='store_true', help='Apply normalization to the model')
+    parser = argparse.ArgumentParser(
+        description="Train a GCN model on a three nodes dataset"
+    )
+    parser.add_argument(
+        "--normalize", action="store_true", help="Apply normalization to the model"
+    )
     args = parser.parse_args()
     main(normalize=args.normalize)

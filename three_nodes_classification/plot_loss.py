@@ -1,17 +1,19 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from dataset import generate_three_nodes_dataset
-from models import GCN, SAGE, NonLinearSAGE
+from models import NonLinearSAGE
 from torch_geometric.loader import DataLoader
 import matplotlib
-matplotlib.use('Qt5Agg')
-#matplotlib.use('pgf')
+
+matplotlib.use("Qt5Agg")
+# matplotlib.use('pgf')
+
 
 def print_model_parameters(model):
     for name, param in model.named_parameters():
         print(name, param.data)
+
 
 # Create a dataset
 data_list = generate_three_nodes_dataset(300)
@@ -45,16 +47,16 @@ for i in range(len(w1_range)):
 
 # Plot the 3D surface
 fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(W1, W2, Loss, cmap='viridis', edgecolor='none')
+ax = fig.add_subplot(111, projection="3d")
+ax.plot_surface(W1, W2, Loss, cmap="viridis", edgecolor="none")
 
-ax.set_xlabel('w1')
-ax.set_ylabel('w2')
-ax.set_zlabel('Loss')
-ax.set_title('3D Loss Surface')
+ax.set_xlabel("w1")
+ax.set_ylabel("w2")
+ax.set_zlabel("Loss")
+ax.set_title("3D Loss Surface")
 
 # high resolution plot
-plt.savefig('loss_3d.png', dpi=900)
+plt.savefig("loss_3d.png", dpi=900)
 
 plt.ion()
 plt.show(block=True)

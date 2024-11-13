@@ -45,7 +45,6 @@ if __name__ == "__main__":
     training = True
 
     while training:
-
         # config["lr"] = 0.01 * (config["tree_depth"] + 1)
 
         if config["tree_depth"] > 2:
