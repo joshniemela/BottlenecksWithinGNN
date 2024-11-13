@@ -1,9 +1,6 @@
-import torch
-from torch.nn import Linear, Parameter
 from torch_geometric.nn import MessagePassing
-from torch_geometric.utils import add_self_loops, degree, sort_edge_index
-from torch_geometric.nn.aggr import MLPAggregation, LSTMAggregation
 from torch_geometric.utils import sort_edge_index
+from torch_geometric.nn.aggr import MLPAggregation, LSTMAggregation
 
 
 class GCNLSTMConv(MessagePassing):

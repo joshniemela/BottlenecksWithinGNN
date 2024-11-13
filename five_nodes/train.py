@@ -3,7 +3,6 @@ from models import GCN
 from torch_geometric.loader import DataLoader
 import torch
 
-import torch.optim as optim
 from torch.optim.adam import Adam
 
 # Hyperparameters

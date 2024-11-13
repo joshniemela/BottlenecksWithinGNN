@@ -12,33 +12,33 @@
     };
   };
 
-  outputs =
-    { self
-    , nixpkgs
-    , flake-utils
-    , poetry2nix
-    ,
-    }: (flake-utils.lib.eachDefaultSystem (system:
-    let
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-        overlays = [ poetry2nix.overlays.default ];
-      };
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    poetry2nix,
+  }: (flake-utils.lib.eachDefaultSystem (system: let
+    pkgs = import nixpkgs {
+      inherit system;
+      config.allowUnfree = true;
+      overlays = [poetry2nix.overlays.default];
+    };
 
-      customOverrides = self: super: {
-        scikit-build = super.scikit-build.overridePythonAttrs (
-          old: {
-            buildInputs = [ self.wheel ] ++ (old.buildInputs or [ ]);
-          }
-        );
+    customOverrides = self: super: {
+      scikit-build = super.scikit-build.overridePythonAttrs (
+        old: {
+          buildInputs = [self.wheel] ++ (old.buildInputs or []);
+        }
+      );
 
-        nvidia-cusparse-cu12 = super.nvidia-cusparse-cu12.overridePythonAttrs(old: {
-          autoPatchelfIgnoreMissingDeps = true;
-          buildInputs = [
+      nvidia-cusparse-cu12 = super.nvidia-cusparse-cu12.overridePythonAttrs (old: {
+        autoPatchelfIgnoreMissingDeps = true;
+        buildInputs =
+          [
             self.nvidia-nvjitlink-cu12
-          ] ++ (old.buildInputs or [ ]);
-        });
+          ]
+          ++ (old.buildInputs or []);
+      });
 
       nvidia-cudnn-cu12 = super.nvidia-cudnn-cu12.overridePythonAttrs (attrs: {
         autoPatchelfIgnoreMissingDeps = true;
@@ -46,9 +46,12 @@
         postFixup = ''
           rm -r $out/${self.python.sitePackages}/nvidia/{__pycache__,__init__.py}
         '';
-        propagatedBuildInputs = attrs.propagatedBuildInputs or [ ] ++ [
-          self.nvidia-cublas-cu12
-        ];
+        propagatedBuildInputs =
+          attrs.propagatedBuildInputs
+          or []
+          ++ [
+            self.nvidia-cublas-cu12
+          ];
       });
 
       nvidia-cuda-nvrtc-cu12 = super.nvidia-cuda-nvrtc-cu12.overridePythonAttrs (_: {
@@ -64,27 +67,32 @@
         postFixup = ''
           rm -r $out/${self.python.sitePackages}/nvidia/{__pycache__,__init__.py}
         '';
-        propagatedBuildInputs = attrs.propagatedBuildInputs or [ ] ++ [
-          self.nvidia-cublas-cu12
-        ];
+        propagatedBuildInputs =
+          attrs.propagatedBuildInputs
+          or []
+          ++ [
+            self.nvidia-cublas-cu12
+          ];
       });
 
-        # wxpython = pkgs.python311Packages.wxPython_4_2;
-        wxpython = super.wxpython.overridePythonAttrs (old: {
+      # wxpython = pkgs.python311Packages.wxPython_4_2;
+      wxpython = super.wxpython.overridePythonAttrs (old: {
+        buildInputs =
+          [
+            self.attrdict
+            self.setuptools
+          ]
+          ++ (old.buildInputs or []);
+        nativeBuildInputs = [self.sip] ++ (old.nativeBuildInputs or []);
+      });
+
+      pybind11 = pkgs.python312Packages.pybind11;
+
+      torch =
+        super.torch.overridePythonAttrs
+        (old: {
           buildInputs =
             [
-              self.attrdict
-              self.setuptools
-            ]
-            ++ (old.buildInputs or [ ]);
-          nativeBuildInputs = [ self.sip ] ++ (old.nativeBuildInputs or [ ]);
-        });
-
-        pybind11 = pkgs.python312Packages.pybind11;
-
-        torch = super.torch.overridePythonAttrs
-          (old: {
-            buildInputs = [
               self.nvidia-cublas-cu12
               self.nvidia-cuda-cupti-cu12
               self.nvidia-cuda-nvrtc-cu12
@@ -97,49 +105,51 @@
               self.nvidia-nccl-cu12
               self.nvidia-nvtx-cu12
               self.triton
-            ] ++ (old.buildInputs or [ ]);
-          });
-          };
+            ]
+            ++ (old.buildInputs or []);
+        });
+    };
 
-        gpu_libs = with pkgs; [
-          cudaPackages_11.cudatoolkit
-          cudaPackages_11.cudatoolkit.lib
-          cudaPackages_11.cudnn
-          cudaPackages_11.libcufft
-          cudaPackages_11.libcublas
-          cudaPackages_11.libcurand
-          ocl-icd
-        ];
+    gpu_libs = with pkgs; [
+      cudaPackages_11.cudatoolkit
+      cudaPackages_11.cudatoolkit.lib
+      cudaPackages_11.cudnn
+      cudaPackages_11.libcufft
+      cudaPackages_11.libcublas
+      cudaPackages_11.libcurand
+      ocl-icd
+    ];
 
-        my_env = (pkgs.poetry2nix.mkPoetryEnv
-          {
-            projectDir = ./.;
-            preferWheels = true;
-            overrides = [ customOverrides pkgs.poetry2nix.defaultPoetryOverrides ];
-            python = pkgs.python312;
-          }).override { ignoreCollisions = true; };
-        in {
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            ruff
-            poetry
-            my_env
-            gtk3
-            glib
-            gsettings-desktop-schemas
-            clinfo
-            zlib
-            cmake
-          ];
-          # ++ gpu_libs;
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-            "/run/opengl-driver"
-            "${my_env}/${my_env.python.sitePackages}/nvidia/cudnn"
-            "${my_env}/${my_env.python.sitePackages}/nvidia/cublas"
-            "${my_env}/${my_env.python.sitePackages}/nvidia/nvjitlink"
-            "${my_env}/${my_env.python.sitePackages}/nvidia/cusparse"
-          ];
-        };
-        defaultPackage = my_env;
-      }));
-      }
+    my_env = (pkgs.poetry2nix.mkPoetryEnv
+      {
+        projectDir = ./.;
+        preferWheels = true;
+        overrides = [customOverrides pkgs.poetry2nix.defaultPoetryOverrides];
+        python = pkgs.python312;
+      })
+    .override {ignoreCollisions = true;};
+  in {
+    devShell = pkgs.mkShell {
+      buildInputs = with pkgs; [
+        ruff
+        poetry
+        my_env
+        gtk3
+        glib
+        gsettings-desktop-schemas
+        clinfo
+        zlib
+        cmake
+      ];
+      # ++ gpu_libs;
+      LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+        "/run/opengl-driver"
+        "${my_env}/${my_env.python.sitePackages}/nvidia/cudnn"
+        "${my_env}/${my_env.python.sitePackages}/nvidia/cublas"
+        "${my_env}/${my_env.python.sitePackages}/nvidia/nvjitlink"
+        "${my_env}/${my_env.python.sitePackages}/nvidia/cusparse"
+      ];
+    };
+    defaultPackage = my_env;
+  }));
+}

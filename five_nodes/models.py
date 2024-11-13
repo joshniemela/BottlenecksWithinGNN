@@ -1,5 +1,5 @@
 import torch.nn as nn
-from torch_geometric.nn.conv import GraphConv, GCNConv
+from torch_geometric.nn.conv import GCNConv
 
 
 class GCN(nn.Module):

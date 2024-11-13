@@ -1,4 +1,4 @@
-""" Generate binary trees with random values and random number of neighbours. """
+"""Generate binary trees with random values and random number of neighbours."""
 
 import torch
 from torch_geometric.data import Data

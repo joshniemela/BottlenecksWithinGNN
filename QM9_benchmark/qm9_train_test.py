@@ -4,7 +4,7 @@ from models import GCN_regressor as GCN
 from torch.optim import Adam
 from torch.nn import MSELoss
 from torch import cuda
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 BATCH_SIZE = 2048 * 4
 
