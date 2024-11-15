@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from dataset import CitationDataset
 
+
 class GCN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
         super().__init__()
@@ -16,6 +17,7 @@ class GCN(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
+
 def train(model, data, optimizer):
     model.train()
     optimizer.zero_grad()
@@ -25,6 +27,7 @@ def train(model, data, optimizer):
     optimizer.step()
     return loss
 
+
 def test(model, data):
     model.eval()
     out = model(data.x, data.edge_index)
@@ -33,29 +36,31 @@ def test(model, data):
     test_acc = int(test_correct.sum()) / int(data.test_mask.sum())
     return test_acc
 
+
 def main():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Load dataset (Cora by default)
-    dataset = CitationDataset('Cora')
+    dataset = CitationDataset("Cora")
     data = dataset.get_data().to(device)
-    
+
     # Initialize model
     model = GCN(
         in_channels=dataset.num_features,
         hidden_channels=16,
-        out_channels=dataset.num_classes
+        out_channels=dataset.num_classes,
     ).to(device)
-    
+
     # Setup training
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-    
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+
     # Training loop
-    for epoch in range(200):
+    for epoch in range(500):
         loss = train(model, data, optimizer)
         if epoch % 20 == 0:
             test_acc = test(model, data)
-            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Test Acc: {test_acc:.4f}')
+            print(f"Epoch: {epoch:04d}, Loss: {loss:.4f}, Test Acc: {test_acc:.4f}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
