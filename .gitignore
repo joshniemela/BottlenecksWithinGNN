@@ -4,5 +4,7 @@ __pycache__/
 .ruff_cache/
 .vscode/
 data/*
+*/data
+*/datasets
 .direnv
 *.png
