@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, MessagePassing
 from dataset import CitationDataset
+from torch_geometric.data import Data
 
 
 class GCN(torch.nn.Module):
@@ -16,6 +17,14 @@ class GCN(torch.nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.conv2(x, edge_index)
         return x
+
+
+def fully_connect(data: Data) -> Data:
+    # Connect every node to every other node
+    data.full_edge_index = torch.stack(
+        [data.edge_index[0], data.edge_index[1], torch.arange(data.num_nodes)]
+    )
+    return data
 
 
 def train(model, data, optimizer):

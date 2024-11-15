@@ -6,7 +6,7 @@ from torch_geometric.transforms import NormalizeFeatures
 class CitationDataset:
     """Handles loading of citation network datasets (Cora, CiteSeer, PubMed)"""
 
-    def __init__(self, name, root="./data", transform=NormalizeFeatures()):
+    def __init__(self, name, root="./datasets", transform=NormalizeFeatures()):
         """
         Args:
             name: Dataset name ('Cora', 'CiteSeer', or 'PubMed')
