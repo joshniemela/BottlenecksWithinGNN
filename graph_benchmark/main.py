@@ -1,8 +1,10 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, MessagePassing
+from torch_geometric.transforms import NormalizeFeatures, Compose
 from dataset import CitationDataset
 from torch_geometric.data import Data
+from fully_adjacent import fully_connect
 
 
 class GCN(torch.nn.Module):
@@ -17,14 +19,6 @@ class GCN(torch.nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.conv2(x, edge_index)
         return x
-
-
-def fully_connect(data: Data) -> Data:
-    # Connect every node to every other node
-    data.full_edge_index = torch.stack(
-        [data.edge_index[0], data.edge_index[1], torch.arange(data.num_nodes)]
-    )
-    return data
 
 
 def train(model, data, optimizer):
@@ -50,13 +44,37 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load dataset (Cora by default)
-    dataset = CitationDataset("Cora")
+    dataset = CitationDataset("Cora", transform=NormalizeFeatures())
     data = dataset.get_data().to(device)
 
     # Initialize model
     model = GCN(
         in_channels=dataset.num_features,
         hidden_channels=16,
+        out_channels=dataset.num_classes,
+    ).to(device)
+
+    # Setup training
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+
+    # Training loop
+    for epoch in range(500):
+        loss = train(model, data, optimizer)
+        if epoch % 20 == 0:
+            test_acc = test(model, data)
+            print(f"Epoch: {epoch:04d}, Loss: {loss:.4f}, Test Acc: {test_acc:.4f}")
+
+    print("Done!")
+    # Load dataset (Cora by default)
+    dataset = CitationDataset(
+        "Cora", transform=Compose([fully_connect, NormalizeFeatures()])
+    )
+    data = dataset.get_data().to(device)
+
+    # Initialize model
+    model = GCN(
+        in_channels=dataset.num_features,
+        hidden_channels=64,
         out_channels=dataset.num_classes,
     ).to(device)
 
