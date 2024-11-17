@@ -12,7 +12,7 @@ def fully_connect(data: Data) -> Data:
     assert data.num_nodes is not None
 
     # An index of what connected component a node belongs to
-    connected_components = torch.zeros(data.num_nodes, dtype=torch.long)
+    connected_components = torch.zeros(data.num_nodes, dtype=torch.int)
     connected_components.fill_(-1)  # -1 is not-visited
 
     # Initialise with no components
@@ -41,12 +41,15 @@ def fully_connect(data: Data) -> Data:
     # DFS ends
 
     n_components = component_id + 1
-    # compute all cartesian products of all components
-    data.full_edge_index = torch.zeros((2, 0), dtype=torch.long)
-    for component in range(n_components):
-        component_nodes = torch.where(connected_components == component)[0]
-        all_edges = torch.cartesian_prod(component_nodes, component_nodes).T
-        print(all_edges)
-        data.full_edge_index = torch.cat((data.full_edge_index, all_edges), dim=1)
 
+    full_edges = []
+    for component in range(n_components):
+        component_nodes = torch.where(connected_components == component)[0].int()
+
+        # This computes the cartesian product of a connected component
+        i, j = torch.meshgrid(component_nodes, component_nodes, indexing="ij")
+        edges = torch.stack((i.flatten(), j.flatten()), dim=0)
+        full_edges.append(edges)
+
+    data.full_edge_index = torch.cat(full_edges, dim=1).int()
     return data
