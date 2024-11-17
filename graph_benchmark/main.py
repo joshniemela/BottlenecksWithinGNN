@@ -47,7 +47,6 @@ class GCN(nn.Module):
         for i, layer in enumerate(self.layers):
             x = layer(x, edge_index)
             x = F.relu(x)
-            x = self.layer_norms[i](x)
 
         return self.output_layer(
             x, full_edge_index if self.use_fully_adj else edge_index
@@ -77,7 +76,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load dataset (Cora by default)
-    dataset = CitationDataset("Cora", transform=None)
+    dataset = CitationDataset("Cora", transform=fully_connect)
 
     data = dataset.get_data().to(device)
 
@@ -87,7 +86,7 @@ def main():
         hidden_dim=128,
         output_dim=dataset.num_classes,
         num_hidden_layers=2,
-        use_fully_adj=False,
+        use_fully_adj=True,
     ).to(device)
 
     # Setup training
@@ -101,30 +100,6 @@ def main():
             print(f"Epoch: {epoch:04d}, Loss: {loss:.4f}, Test Acc: {test_acc:.4f}")
 
     print("Done!")
-    # Load dataset (Cora by default)
-    device = "cpu"
-    dataset = CitationDataset("Cora", transform=fully_connect)
-    data = dataset.get_data().to(device)
-    data.edge_index = data.full_edge_index
-
-    # Initialize model
-    model = GCN(
-        input_dim=dataset.num_features,
-        hidden_dim=128,
-        output_dim=dataset.num_classes,
-        num_hidden_layers=2,
-        use_fully_adj=True,
-    ).to(device)
-
-    # Setup training
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0149, weight_decay=0.1429)
-
-    # Training loop
-    for epoch in range(1000):
-        loss = train(model, data, optimizer)
-        if epoch % 20 == 0:
-            test_acc = test(model, data)
-            print(f"Epoch: {epoch:04d}, Loss: {loss:.4f}, Test Acc: {test_acc:.4f}")
 
 
 if __name__ == "__main__":
