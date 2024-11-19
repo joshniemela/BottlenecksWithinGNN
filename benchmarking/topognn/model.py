@@ -39,8 +39,14 @@ class TOGL(nn.Module):
             torch.tensor of shape (n_nodes, n_filtrations)
         """
         return self.filtrations(X)
-    
-    def dfs(self, vertex: int, visited: torch.Tensor, component: List[int], graph_edges: torch.Tensor):
+
+    def dfs(
+        self,
+        vertex: int,
+        visited: torch.Tensor,
+        component: List[int],
+        graph_edges: torch.Tensor,
+    ):
         visited[vertex] = True
         component.append(vertex)
         for edge in graph_edges:
@@ -49,7 +55,9 @@ class TOGL(nn.Module):
             if edge[1] == vertex and not visited[edge[0]]:
                 self.dfs(edge[0], visited, component, graph_edges)
 
-    def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> torch.Tensor:
+    def generate_persistence_diagram_dim0(
+        self, X: torch.Tensor, edge_list: torch.Tensor
+    ) -> torch.Tensor:
         """
         Generates the 0-dimensional persistence diagrams.
         Args:
@@ -67,7 +75,7 @@ class TOGL(nn.Module):
 
             # Initialize empty graph
             graph_vertices = torch.zeros(n_nodes, dtype=torch.bool)
-            graph_edges = []
+            graph_edges = torch.empty(0, 2, dtype=torch.long)
 
             persistence_diagram = PersistenceDiagram()
             step = 0
@@ -78,24 +86,25 @@ class TOGL(nn.Module):
                 # Add the vertex to the graph
                 graph_vertices[vertex] = True
 
-               # Add edges to the graph if both vertices are present
+                # Add edges to the graph if both vertices are present
                 mask = edge_list[1] == vertex
                 neighbors = edge_list[0][mask]
 
                 # Iterate through the neighbors
                 for neighbor in neighbors:
                     if graph_vertices[neighbor]:
-                        graph_edges.append((vertex, neighbor.item()))
-
-                graph_edges_tensor = torch.tensor(graph_edges, dtype=torch.long)
+                        graph_edges = torch.cat(
+                            [graph_edges, torch.tensor([[vertex, neighbor]])]
+                        )
 
                 # Compute connected components using DFS
                 visited = torch.zeros(n_nodes, dtype=torch.bool)
                 components = []
-                for k in range(n_nodes):
+                print(indices[: j + 1])
+                for k in indices[: j + 1]:
                     if not visited[k]:
                         component = []
-                        self.dfs(k, visited, component, graph_edges_tensor)
+                        self.dfs(k, visited, component, graph_edges)
                         if component:
                             components.append(component)
 
@@ -103,20 +112,27 @@ class TOGL(nn.Module):
                 persistence_diagram.step(components, step)
                 step += 1
 
+            # Finalize the persistence diagram
+            persistence_diagram.finalize()
+
             # Convert the component longevity dictionary to a tensor
             longevity_tensor = torch.tensor(
                 [v for v in persistence_diagram.component_longivity.values()],
-                dtype=torch.float32
+                dtype=torch.float32,
             )
             persistence_diagrams.append(longevity_tensor)
 
-        return torch.stack(persistence_diagrams)
+        return torch.concat(persistence_diagrams, dim=0)
 
 
 class PersistenceDiagram:
     def __init__(self):
-        self.live_component_dict = {}  # key: component-associated vertex, value: list of vertices in the component
-        self.component_longivity = {}  # key: component-associated vertex, value: longevity tuple (birth, death)
+        self.live_component_dict = (
+            {}
+        )  # key: component-associated vertex, value: list of vertices in the component
+        self.component_longivity = (
+            {}
+        )  # key: component-associated vertex, value: longevity tuple (birth, death)
         self.dead_component_dict = {}
 
     def step(self, connected_components: List[List[int]], step: int):
@@ -125,9 +141,12 @@ class PersistenceDiagram:
             root_vertex = component[0]
             if root_vertex not in self.live_component_dict:
                 self.live_component_dict[root_vertex] = component
-                self.component_longivity[root_vertex] = (0, step)
+                self.component_longivity[root_vertex] = (step, step)
             else:
-                self.component_longivity[root_vertex] = (self.component_longivity[root_vertex][0], step)
+                self.component_longivity[root_vertex] = (
+                    self.component_longivity[root_vertex][0],
+                    step,
+                )
 
         # Mark components as dead if they are no longer present
         live_vertices = set(self.live_component_dict.keys())
@@ -136,7 +155,14 @@ class PersistenceDiagram:
 
         for vertex in dead_vertices:
             self.dead_component_dict[vertex] = self.live_component_dict[vertex]
-            self.component_longivity[vertex] = (self.component_longivity[vertex][0], step)
             del self.live_component_dict[vertex]
 
         return self.component_longivity
+
+    def finalize(self):
+        # Mark all remaining components with longevity (birth, inf)
+        for vertex in self.live_component_dict:
+            self.component_longivity[vertex] = (
+                self.component_longivity[vertex][0],
+                float("inf"),
+            )
