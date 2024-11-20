@@ -239,7 +239,29 @@ The results of the tree neighbours-match experiment show that contrary to the fi
 The results of the tree neighbours-match experiment show that contrary to the findings in \cite{alon_bottleneck_2021}, the GCN with the fully adjacent last layer does not outperform the GCN model without the fully adjacent last layer. The results are consistent across all depths. This is an interesting result and motivates further investigation into the over-squashing problem on a more theoretical level rather than just heuristic, as it is difficult to draw any conclusions from our contradictory results alone. 
 
 
+\section{Graph benchmark implementations}
+\subsection{Fully adjacent last layer}
+We computed all the connected components of the graph, then for each connected component, we computed the cartesian product of the nodes and added all these as edges to the graph.
+This yielded bad results (source), we will change this to a better implementation after implmenting the TOGL and SDRF benchmarks.
 
+
+\subsection{SDRF}
+To compute the ricci curvature, we must compute three non-trivial values for a given edge (i~j). The number of 3-cycles, the number of 4-cycles without diagonals, and the maximum number of times a specific node is visited with a 4-cycle from i to j (degeneracy).
+
+For the 3-cycles we noticed that this was equivalent to finding a mutual neighbour of i and j.
+The 4-cycle sets were more complicated to compute, we did this by constructing a set, \(\{i, j\} \cup \text{triangles}(i, j)\). We then found the neighbours of \(i\), and removed the bad nodes.
+For each of these candidate nodes, we then found the neighbours, removed the bad nodes again, and then added the nodes that yielded a path to \(j\).
+The maximum degeneracy for 4-cycles was computed in a similar way as in CITATION CURVATURE using an adjacency list instead of an adjacency matrix.
+
+The ricci curvature is relatively expensive to compute, and we need to potentially compute it for all the edges in the graph every time we add or remove an edge.
+This is not feasible for large graphs and we therefore looked at how to make the computation of subsequent ricci curvatures faster after adding or removing an edge.
+We noticed that the ricci curvature depends on edges only 2-hops away from the two nodes we are computing the ricci curvature between. 
+This means once we update or remove an edge, we can compute the 2-hop transitive closure for the two affected nodes, mark them as affected and then recompute the ricci curvatures for all the affected edges starting at nodes inside the transitive closure.
+
+This is significantly more efficient (Each subsequent edge addition or removal costs \(O(\mu_d^2)\)), where \(\mu_d\) is the average degree of the graph. The initial step takes \(O(|E|\) time and without the optimisation, all subsequent changes would have taken the same time.
+We also did an additional optimisation by memoising the computations of 4-cycles.
+
+\subsection{TOGL}
 
 
 \printbibliography
