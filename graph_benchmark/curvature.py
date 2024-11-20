@@ -1,17 +1,31 @@
 import torch
+from copy import deepcopy
 from torch import Tensor
 from torch_geometric.data import Data
 
 
+from contextlib import contextmanager
+
+
+@contextmanager
+def temporary_edge(nd, i, j):
+    original_neighbors_i = nd.neighbour_dict[i].copy()
+    original_neighbors_j = nd.neighbour_dict[j].copy()
+    nd.add(i, j)
+    try:
+        yield
+    finally:
+        nd.neighbour_dict[i] = original_neighbors_i
+        nd.neighbour_dict[j] = original_neighbors_j
+
+
 class NeighbourDict:
     def __init__(self, edge_index: torch.Tensor):
-        self.neighbour_dict = {}
+        self.neighbour_dict = []
         self.memo = {}
-        self.cache_misses = 0
-        self.cache_hits = 0
 
         for i in range(edge_index.max().item() + 1):
-            self.neighbour_dict[i] = set()
+            self.neighbour_dict.append(set())
         for i, j in zip(edge_index[0], edge_index[1]):
             self.neighbour_dict[int(i)].add(int(j))
 
@@ -46,7 +60,6 @@ class NeighbourDict:
         Returns the neighbours of i that are also neighbours of j (4-cycles)
         """
         if (i, j) in self.memo:
-            self.cache_hits += 1
             return self.memo[(i, j)]
         # Bad nodes are all triangle nodes, i and j
         bad_nodes = self.three_cycles(i, j) | {i, j}
@@ -62,7 +75,6 @@ class NeighbourDict:
                 four_cycle_nodes.add(k)
 
         self.memo[(i, j)] = four_cycle_nodes
-        self.cache_misses += 1
 
         return four_cycle_nodes
 
@@ -100,6 +112,16 @@ class NeighbourDict:
         """
         Returns the Ricci curvature of the edge (i, j)
         """
+        if min(self.degree(i), self.degree(j)) == 1:
+            return 0
+        if len(self.four_cycles(i, j)) != 0:
+            last_term = (
+                1
+                / (self.max_degeneracy(i, j) * max(self.degree(i), self.degree(j)))
+                * (len(self.four_cycles(i, j)) - len(self.four_cycles(j, i)))
+            )
+        else:
+            last_term = 0
 
         return (
             2 / self.degree(i)
@@ -107,36 +129,116 @@ class NeighbourDict:
             - 2
             + 2 * len(self.three_cycles(i, j)) / max(self.degree(i), self.degree(j))
             + len(self.three_cycles(i, j)) / min(self.degree(i), self.degree(j))
-            + (
-                1
-                / (self.max_degeneracy(i, j) * max(self.degree(i), self.degree(j)))
-                * (len(self.four_cycles(i, j)) - len(self.four_cycles(j, i)))
-                if len(self.four_cycles(i, j)) > 0
-                else 0
-            )
+            + last_term
         )
 
 
-def ricci_curvatures(edge_index: torch.Tensor) -> Tensor:
-    neighbour_dict = NeighbourDict(edge_index)
-    # for every edge in the edge_index, we compute the ricci curvature
-    ricci_curvatures = []
-    for i, j in zip(edge_index[0], edge_index[1]):
-        ricci_curvatures.append(neighbour_dict.ricci_curvature(i.item(), j.item()))
-    print(f"Cache hits: {neighbour_dict.cache_hits}")
-    print(f"Cache misses: {neighbour_dict.cache_misses}")
-    return torch.tensor(ricci_curvatures)
+class SDRF:
+    def __init__(self, edge_index: torch.Tensor):
+        self.nd = NeighbourDict(edge_index)
+        self.ricci_curvature = {}
+        self.pending_edges = []
+        for i, j in zip(edge_index[0], edge_index[1]):
+            self.pending_edges.append((i.item(), j.item()))
+
+    def sync(self):
+        """
+        Synchronises the Ricci curvatures of the graph
+        This must be called after modifying the graph
+        """
+        # reset the memo to avoid caching the wrong values
+        # TODO: make so we don't nuke the entire cache each time
+        self.nd.memo = {}
+        while len(self.pending_edges) > 0:
+            i, j = self.pending_edges.pop()
+            self.ricci_curvature[i, j] = self.nd.ricci_curvature(i, j)
+
+    def add_edge(self, i, j):
+        # All the neighbours of neighbours of i or j might have changed due to this modification
+        # TODO: figure out what the receptive field is of add and remove
+        neighbours = self.nd.neighbours({i, j})
+        # add all the edges that are connected to these neighbours
+        for k in neighbours:
+            for l in self.nd[k]:
+                self.pending_edges.append((k, l))
+
+        # This edge now exists and has an undefined Ricci curvature
+        self.nd.add(i, j)
+        self.pending_edges.append((i, j))
+
+    def remove_edge(self, i, j):
+        # All the neighbours of neighbours of i or j might have changed due to this modification
+        # TODO: figure out what the receptive field is of add and remove
+        neighbours = self.nd.neighbours({i, j})
+        # add all the edges that are connected to these neighbours
+        for k in neighbours:
+            for l in self.nd[k]:
+                self.pending_edges.append((k, l))
+
+        # This edge no longer exists
+        self.nd.remove(i, j)
+        del self.ricci_curvature[i, j]
+
+    def receptive_field(self, i, r):
+        """
+        Returns the set of all reachable nodes from i within radius r
+        """
+        reachable_nodes = {i}
+        for _ in range(r):
+            reachable_nodes = self.nd.neighbours(reachable_nodes)
+        return reachable_nodes
+
+    def preprocess(self, temperature, c_max, max_iter):
+        """
+        Performs the SDRF algorithm on the graph given the receptive field radius,
+        temperature, uppper bound on the Ricci curvature, and max iterations
+        """
+        for _ in range(max_iter):
+            # Find the edge with minimal Ricci curvature
+            min_rc = float("inf")
+            min_edge = (None, None)
+            for i, j in self.ricci_curvature:
+                if self.ricci_curvature[i, j] < min_rc:
+                    min_rc = self.ricci_curvature[i, j]
+                    min_edge = (i, j)
+
+            edges = []
+            i_receptive_field = self.nd[min_edge[0]]
+            j_receptive_field = self.nd[min_edge[1]]
+            print(f"length of i_receptive_field: {len(i_receptive_field)}")
+            print(f"length of j_receptive_field: {len(j_receptive_field)}")
+            for n in i_receptive_field:
+                for m in j_receptive_field:
+                    if n != m:
+                        edges.append((n, m))
+            i, j = min_edge
+
+            #  x is our vector of improvements
+            x = torch.zeros(len(edges))
+            old_rc = self.ricci_curvature[i, j]
+            for idx, (k, l) in enumerate(edges):
+                self.nd.memo = {}
+                with temporary_edge(self.nd, k, l):
+                    new_rc = self.nd.ricci_curvature(i, j)
+                    x[idx] = new_rc - old_rc
+
+            return x
 
 
 import time, dataset
 
-citation_data = dataset.CitationDataset("PubMed")
+citation_data = dataset.CitationDataset("Cora")
+sdrf = SDRF(citation_data.get_data().edge_index)
 start = time.time()
-ricci_curvatures(citation_data.get_data().edge_index)
+sdrf.sync()
 print(time.time() - start)
 
+# turn edge index into sparse
+sparse = torch.sparse_coo_tensor(
+    citation_data.get_data().edge_index,
+    torch.ones(citation_data.get_data().edge_index.shape[1]),
+)
 
-def sdrf(data: Data) -> Data:
-    assert data.edge_index is not None
-    # dict is keyed on node contains [neighbour_nodess...]
-    neighbour_dict = compute_neighbour_dict(data.edge_index)
+start = time.time()
+sdrf.preprocess(1, 1, 10)
+print(time.time() - start)
