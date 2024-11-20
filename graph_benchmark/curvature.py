@@ -130,6 +130,9 @@ class SDRF:
         Synchronises the Ricci curvatures of the graph
         This must be called after modifying the graph
         """
+        # reset the memo to avoid caching the wrong values
+        # TODO: make so we don't nuke the entire cache each time
+        self.nd.memo = {}
         while len(self.pending_edges) > 0:
             i, j = self.pending_edges.pop()
             self.ricci_curvature[i, j] = self.nd.ricci_curvature(i, j)
