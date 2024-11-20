@@ -117,22 +117,56 @@ class NeighbourDict:
         )
 
 
-def ricci_curvatures(edge_index: torch.Tensor) -> Tensor:
-    neighbour_dict = NeighbourDict(edge_index)
-    # for every edge in the edge_index, we compute the ricci curvature
-    ricci_curvatures = []
-    for i, j in zip(edge_index[0], edge_index[1]):
-        ricci_curvatures.append(neighbour_dict.ricci_curvature(i.item(), j.item()))
-    print(f"Cache hits: {neighbour_dict.cache_hits}")
-    print(f"Cache misses: {neighbour_dict.cache_misses}")
-    return torch.tensor(ricci_curvatures)
+class SDRF:
+    def __init__(self, edge_index: torch.Tensor):
+        self.nd = NeighbourDict(edge_index)
+        self.ricci_curvature = {}
+        self.pending_edges = []
+        for i, j in zip(edge_index[0], edge_index[1]):
+            self.pending_edges.append((i.item(), j.item()))
+
+    def sync(self):
+        """
+        Synchronises the Ricci curvatures of the graph
+        This must be called after modifying the graph
+        """
+        while len(self.pending_edges) > 0:
+            i, j = self.pending_edges.pop()
+            self.ricci_curvature[i, j] = self.nd.ricci_curvature(i, j)
+
+    def add_edge(self, i, j):
+        # All the neighbours of neighbours of i or j might have changed due to this modification
+        # TODO: figure out what the receptive field is of add and remove
+        neighbours = self.nd.neighbours({i, j})
+        # add all the edges that are connected to these neighbours
+        for k in neighbours:
+            for l in self.nd[k]:
+                self.pending_edges.append((k, l))
+
+        # This edge now exists and has an undefined Ricci curvature
+        self.nd.add(i, j)
+        self.pending_edges.append((i, j))
+
+    def remove_edge(self, i, j):
+        # All the neighbours of neighbours of i or j might have changed due to this modification
+        # TODO: figure out what the receptive field is of add and remove
+        neighbours = self.nd.neighbours({i, j})
+        # add all the edges that are connected to these neighbours
+        for k in neighbours:
+            for l in self.nd[k]:
+                self.pending_edges.append((k, l))
+
+        # This edge no longer exists
+        self.nd.remove(i, j)
+        del self.ricci_curvature[i, j]
 
 
 import time, dataset
 
 citation_data = dataset.CitationDataset("PubMed")
+sdrf = SDRF(citation_data.edge_index)
 start = time.time()
-ricci_curvatures(citation_data.get_data().edge_index)
+sdrf.sync()
 print(time.time() - start)
 
 
