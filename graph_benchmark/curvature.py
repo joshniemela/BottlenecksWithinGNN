@@ -3,21 +3,13 @@ from torch import Tensor
 from torch_geometric.data import Data
 
 
-def find_4_cycles(edge_index, k):
-    i, j = edge_index[:, k]
-    i_neighbours = edge_index[1, torch.where(edge_index[0] == i)[0]]
-    triangle_nodes = find_3_cycles(edge_index, k)
-    # Do not include j in the neighbours
-    i_neighbours = i_neighbours[torch.where(i_neighbours != j)[0]]
-    # Do not include any diagonal
-    if len(triangle_nodes) > 0:
-        i_neighbours = i_neighbours[torch.where(i_neighbours != triangle_nodes)[0]]
-    # only include the neighbour if it has a neighbour that goes to j but not to the triangle nodes
-
-
 class NeighbourDict:
     def __init__(self, edge_index: torch.Tensor):
         self.neighbour_dict = {}
+        self.memo = {}
+        self.cache_misses = 0
+        self.cache_hits = 0
+
         for i in range(edge_index.max().item() + 1):
             self.neighbour_dict[i] = set()
         for i, j in zip(edge_index[0], edge_index[1]):
@@ -53,6 +45,9 @@ class NeighbourDict:
         """
         Returns the neighbours of i that are also neighbours of j (4-cycles)
         """
+        if (i, j) in self.memo:
+            self.cache_hits += 1
+            return self.memo[(i, j)]
         # Bad nodes are all triangle nodes, i and j
         bad_nodes = self.three_cycles(i, j) | {i, j}
 
@@ -65,6 +60,9 @@ class NeighbourDict:
             neighbours = self.neighbours(candidate_neighbours)
             if j in neighbours:
                 four_cycle_nodes.add(k)
+
+        self.memo[(i, j)] = four_cycle_nodes
+        self.cache_misses += 1
 
         return four_cycle_nodes
 
@@ -102,6 +100,7 @@ class NeighbourDict:
         """
         Returns the Ricci curvature of the edge (i, j)
         """
+
         return (
             2 / self.degree(i)
             + 2 / self.degree(j)
@@ -124,12 +123,14 @@ def ricci_curvatures(edge_index: torch.Tensor) -> Tensor:
     ricci_curvatures = []
     for i, j in zip(edge_index[0], edge_index[1]):
         ricci_curvatures.append(neighbour_dict.ricci_curvature(i.item(), j.item()))
+    print(f"Cache hits: {neighbour_dict.cache_hits}")
+    print(f"Cache misses: {neighbour_dict.cache_misses}")
     return torch.tensor(ricci_curvatures)
 
 
 import time, dataset
 
-citation_data = dataset.CitationDataset("Cora")
+citation_data = dataset.CitationDataset("PubMed")
 start = time.time()
 ricci_curvatures(citation_data.get_data().edge_index)
 print(time.time() - start)
