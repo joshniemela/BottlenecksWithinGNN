@@ -96,6 +96,15 @@ class NeighbourDict:
 
         return max_degeneracy
 
+    def receptive_field(self, i, r):
+        """
+        Returns the set of all reachable nodes from i within radius r
+        """
+        reachable_nodes = {i}
+        for _ in range(r):
+            reachable_nodes = self.neighbours(reachable_nodes)
+        return reachable_nodes
+
     def ricci_curvature(self, i, j):
         """
         Returns the Ricci curvature of the edge (i, j)
@@ -167,7 +176,7 @@ class SDRF:
 import time, dataset
 
 citation_data = dataset.CitationDataset("PubMed")
-sdrf = SDRF(citation_data.edge_index)
+sdrf = SDRF(citation_data.get_data().edge_index)
 start = time.time()
 sdrf.sync()
 print(time.time() - start)
