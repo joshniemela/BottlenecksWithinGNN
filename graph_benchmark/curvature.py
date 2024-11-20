@@ -96,15 +96,6 @@ class NeighbourDict:
 
         return max_degeneracy
 
-    def receptive_field(self, i, r):
-        """
-        Returns the set of all reachable nodes from i within radius r
-        """
-        reachable_nodes = {i}
-        for _ in range(r):
-            reachable_nodes = self.neighbours(reachable_nodes)
-        return reachable_nodes
-
     def ricci_curvature(self, i, j):
         """
         Returns the Ricci curvature of the edge (i, j)
@@ -171,6 +162,15 @@ class SDRF:
         # This edge no longer exists
         self.nd.remove(i, j)
         del self.ricci_curvature[i, j]
+
+    def receptive_field(self, i, r):
+        """
+        Returns the set of all reachable nodes from i within radius r
+        """
+        reachable_nodes = {i}
+        for _ in range(r):
+            reachable_nodes = self.nd.neighbours(reachable_nodes)
+        return reachable_nodes
 
 
 import time, dataset
