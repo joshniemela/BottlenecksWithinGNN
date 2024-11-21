@@ -172,17 +172,46 @@ class SDRF:
             reachable_nodes = self.nd.neighbours(reachable_nodes)
         return reachable_nodes
 
+    def preprocess(self, r, temperature, c_max, max_iter):
+        """
+        Performs the SDRF algorithm on the graph given the receptive field radius,
+        temperature, uppper bound on the Ricci curvature, and max iterations
+        """
+        for _ in range(max_iter):
+            # Find the edge with minimal Ricci curvature
+            min_rc = float("inf")
+            min_edge = (None, None)
+            for i, j in self.ricci_curvature:
+                if self.ricci_curvature[i, j] < min_rc:
+                    min_rc = self.ricci_curvature[i, j]
+                    min_edge = (i, j)
+
+            print(f"New minimum: {min_edge}, Ricci curvature: {min_rc}")
+
+            #  x is our vector of improvements
+            x = []
+            edges = []
+            for n in self.receptive_field(min_edge[0], r):
+                for m in self.receptive_field(min_edge[1], r):
+                    edges.append((n, m))
+            print(f"length of edges: {len(edges)}")
+
+            i, j = min_edge
+            for k, l in edges:
+                # Add the edge to the graph
+                old_rc = self.nd.ricci_curvature(k, l)
+                self.nd.add(k, l)
+                new_rc = self.nd.ricci_curvature(k, l)
+                # We remove the edge from the graph to have consistency again
+                # this is because k~l is not a true edge at this point
+                self.nd.remove(k, l)
+                x.append(new_rc - old_rc)
+
 
 import time, dataset
 
-citation_data = dataset.CitationDataset("PubMed")
+citation_data = dataset.CitationDataset("Cora")
 sdrf = SDRF(citation_data.get_data().edge_index)
 start = time.time()
 sdrf.sync()
 print(time.time() - start)
-
-
-def sdrf(data: Data) -> Data:
-    assert data.edge_index is not None
-    # dict is keyed on node contains [neighbour_nodess...]
-    neighbour_dict = compute_neighbour_dict(data.edge_index)
