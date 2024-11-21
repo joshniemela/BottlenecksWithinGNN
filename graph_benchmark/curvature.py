@@ -1,4 +1,5 @@
 import torch
+from copy import deepcopy
 from torch import Tensor
 from torch_geometric.data import Data
 
@@ -100,6 +101,16 @@ class NeighbourDict:
         """
         Returns the Ricci curvature of the edge (i, j)
         """
+        if min(self.degree(i), self.degree(j)) == 1:
+            return 0
+        if len(self.four_cycles(i, j)) != 0:
+            last_term = (
+                1
+                / (self.max_degeneracy(i, j) * max(self.degree(i), self.degree(j)))
+                * (len(self.four_cycles(i, j)) - len(self.four_cycles(j, i)))
+            )
+        else:
+            last_term = 0
 
         return (
             2 / self.degree(i)
@@ -107,13 +118,7 @@ class NeighbourDict:
             - 2
             + 2 * len(self.three_cycles(i, j)) / max(self.degree(i), self.degree(j))
             + len(self.three_cycles(i, j)) / min(self.degree(i), self.degree(j))
-            + (
-                1
-                / (self.max_degeneracy(i, j) * max(self.degree(i), self.degree(j)))
-                * (len(self.four_cycles(i, j)) - len(self.four_cycles(j, i)))
-                if len(self.four_cycles(i, j)) > 0
-                else 0
-            )
+            + last_term
         )
 
 
@@ -191,21 +196,24 @@ class SDRF:
             #  x is our vector of improvements
             x = []
             edges = []
-            for n in self.receptive_field(min_edge[0], r):
-                for m in self.receptive_field(min_edge[1], r):
+            i_receptive_field = self.receptive_field(min_edge[0], r)
+            j_receptive_field = self.receptive_field(min_edge[1], r)
+            print(f"length of i_receptive_field: {len(i_receptive_field)}")
+            print(f"length of j_receptive_field: {len(j_receptive_field)}")
+            for n in i_receptive_field:
+                for m in j_receptive_field:
                     edges.append((n, m))
             print(f"length of edges: {len(edges)}")
 
             i, j = min_edge
             for k, l in edges:
+                nd = self.nd
                 # Add the edge to the graph
-                old_rc = self.nd.ricci_curvature(k, l)
-                self.nd.add(k, l)
-                new_rc = self.nd.ricci_curvature(k, l)
-                # We remove the edge from the graph to have consistency again
-                # this is because k~l is not a true edge at this point
-                self.nd.remove(k, l)
+                old_rc = nd.ricci_curvature(k, l)
+                nd.add(k, l)
+                new_rc = nd.ricci_curvature(k, l)
                 x.append(new_rc - old_rc)
+                nd.remove(k, l)
 
 
 import time, dataset
