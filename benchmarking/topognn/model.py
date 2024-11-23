@@ -5,6 +5,33 @@ from torch_geometric.data import Data
 from tqdm import tqdm
 import time
 
+class UnionFind:
+    def __init__(self, size, indices):
+        self.parent = list(range(size))
+        self.rank = [0] * size
+
+        # Initialize the Union-Find rank based on the sorted indices
+        for i, idx in enumerate(indices):
+            self.rank[idx] = i
+
+    def find(self, node):
+        if self.parent[node] != node:
+            self.parent[node] = self.find(self.parent[node])  # Path compression
+        return self.parent[node]
+
+    def union(self, node1, node2):
+        root1 = self.find(node1)
+        root2 = self.find(node2)
+
+        if root1 != root2:
+            # Union by rank
+            if self.rank[root1] < self.rank[root2]:
+                self.parent[root2] = root1
+            elif self.rank[root1] > self.rank[root2]:
+                self.parent[root1] = root2
+            else:
+                self.parent[root2] = root1
+
 
 class TOGL(nn.Module):
     """
@@ -57,91 +84,57 @@ class TOGL(nn.Module):
             if edge[1] == vertex and not visited[edge[0] - 1]:
                 self.dfs(edge[0], visited, component, graph_edges)
 
-    def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> torch.Tensor:
+    def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> List[torch.Tensor]:
         """
-        Generates the 0-dimensional persistence diagrams.
+        Generates 0-dimensional persistence diagrams using the updated PersistenceDiagram class.
+
         Args:
-            X: torch.tensor of shape (n_nodes, n_filtrations)
-            edge_list: torch.tensor of shape (2, n_edges)
+            X: Node features of shape (n_nodes, n_filtrations).
+            edge_list: Edge list of shape (2, n_edges).
+
         Returns:
-            List[torch.Tensor] with each tensor representing the persistence diagram for one filtration.
+            List of tensors, each representing the persistence diagram for one filtration.
         """
         n_nodes = X.shape[0]
         persistence_diagrams = []
 
         for i in range(self.n_filtrations):
-            # Sort nodes by filtration value for the current filtration
-            start_time = time.time()
-            _, indices = torch.sort(X[:, i])
+            _, indices = torch.sort(X[:, i])  # Sort nodes by filtration value for current filtration
+            uf = UnionFind(n_nodes, indices)          # Initialize Union-Find for connected components
+            pd = PersistenceDiagram()        # Initialize the persistence diagram
 
-            # Initialize empty graph
-            graph_vertices = torch.zeros(n_nodes, dtype=torch.bool)
-            graph_edges = torch.empty(0, 2, dtype=torch.long)
+            active_nodes = set()  # Keep track of vertices added to the filtration
+            pbar = tqdm(total=n_nodes, desc=f"Filtration {i}", leave=True)
 
-            persistence_diagram = PersistenceDiagram()
-            step = 0
+            for step, idx in enumerate(indices):
+                vertex = idx.item()          # Current vertex being added
+                active_nodes.add(vertex)
+                pd.step_counter = step
 
-            part_times = {'sort_nodes': 0, 'add_vertex': 0, 'update_edges': 0, 'connected_components': 0}
-            total_time = 0
-
-            pbar = tqdm(total=n_nodes, desc=f"Filtration {i}", position=0, leave=True)
-            for j in range(n_nodes):
-                iteration_start = time.time()
-
-                # Add the vertex to the graph
-                vertex_start = time.time()
-                vertex = indices[j].item() + 1
-                graph_vertices[vertex - 1] = True
-                part_times['add_vertex'] += time.time() - vertex_start
-
-                # Add edges to the graph if both vertices are present
-                edges_start = time.time()
-                mask = edge_list[1] == vertex
-                neighbors = edge_list[0][mask]
+                # Add edges and merge components
+                neighbors = edge_list[0][edge_list[1] == vertex]
                 for neighbor in neighbors:
-                    if graph_vertices[neighbor - 1]:
-                        graph_edges = torch.cat(
-                            [graph_edges, torch.tensor([[vertex, neighbor]])]
-                        )
-                part_times['update_edges'] += time.time() - edges_start
+                    if neighbor.item() in active_nodes:
+                        pd.merge_components(vertex, neighbor.item(), uf)
 
-                # Compute connected components
-                cc_start = time.time()
-                visited = torch.zeros(n_nodes, dtype=torch.bool)
-                components = []
-                for k in indices[: j + 1] + 1:
-                    if not visited[k - 1]:
-                        component = []
-                        self.dfs(k, visited, component, graph_edges)
-                        if component:
-                            components.append(component)
-                part_times['connected_components'] += time.time() - cc_start
+                # Collect connected components
+                components = {}
+                for node in active_nodes:
+                    root = uf.find(node)
+                    if root not in components:
+                        components[root] = []
+                    components[root].append(node)
 
-                # Update persistence diagram with current components
-                persistence_diagram.step(components, step)
-                step += 1
-
-                iteration_end = time.time()
-                total_time += iteration_end - iteration_start
-
-                # Update the progress bar with runtime proportions
-                time_percentages = {
-                    k: (v / total_time) * 100 if total_time > 0 else 0
-                    for k, v in part_times.items()
-                }
-                pbar.set_postfix({
-                    f"{k} %": f"{v:.2f}" for k, v in time_percentages.items()
-                })
+                # Update persistence diagram
+                pd.step(list(components.values()), step, uf)
                 pbar.update(1)
 
             pbar.close()
 
-            # Finalize the persistence diagram
-            persistence_diagram.finalize()
-
-            # Convert the component longevity dictionary to a tensor
+            # Finalize the persistence diagram and convert component lifetimes to tensor
+            pd.finalize()
             longevity_tensor = torch.tensor(
-                [v for v in persistence_diagram.component_longivity.values()],
+                [v for v in pd.component_lifetimes.values()],
                 dtype=torch.float32,
             )
             persistence_diagrams.append(longevity_tensor)
@@ -151,44 +144,71 @@ class TOGL(nn.Module):
 
 class PersistenceDiagram:
     def __init__(self):
-        self.live_component_dict = (
-            {}
-        )  # key: component-associated vertex, value: list of vertices in the component
-        self.component_longivity = (
-            {}
-        )  # key: component-associated vertex, value: longevity tuple (birth, death)
-        self.dead_component_dict = {}
+        self.component_lifetimes = {}  # key: root node, value: (birth, death)
+        self.current_components = {}  # key: node, value: root node
+        self.step_counter = 0  # Track the current step in the filtration
 
-    def step(self, connected_components: List[List[int]], step: int):
-        # Update the birth and death times for each component
-        for component in connected_components:
-            root_vertex = component[0].item()
-            if root_vertex not in self.live_component_dict:
-                self.live_component_dict[root_vertex] = component
-                self.component_longivity[root_vertex] = (step, step)
+    def add_component(self, node):
+        """
+        Add a new component for a node.
+        """
+        self.component_lifetimes[node] = (self.step_counter, float("inf"))
+        self.current_components[node] = node
+
+    def merge_components(self, node1, node2, union_find):
+        """
+        Merge two components. The component of node2 is absorbed into node1's component.
+        """
+        root1 = union_find.find(node1)
+        root2 = union_find.find(node2)
+
+        if root1 != root2:
+            # Determine which component survives based on Union-Find rules
+            surviving_root = min(root1, root2, key=lambda x: union_find.rank[x])
+            absorbed_root = root2 if surviving_root == root1 else root1
+
+            # Update death time for the absorbed component
+            if absorbed_root in self.component_lifetimes:
+                self.component_lifetimes[absorbed_root] = (
+                    self.component_lifetimes[absorbed_root][0],
+                    self.step_counter,
+                )
             else:
-                self.component_longivity[root_vertex] = (
-                    self.component_longivity[root_vertex][0],
-                    step,
+                self.component_lifetimes[absorbed_root] = (
+                    self.step_counter,
+                    self.step_counter,
                 )
 
-        # Mark components as dead if they are no longer present
-        live_vertices = set(self.live_component_dict.keys())
-        current_vertices = {comp[0].item() for comp in connected_components}
-        dead_vertices = live_vertices - current_vertices
+            # Update the Union-Find structure
+            union_find.union(root1, root2)
 
-        for vertex in dead_vertices:
-            self.dead_component_dict[vertex] = self.live_component_dict[vertex]
-            del self.live_component_dict[vertex]
+    def step(self, connected_components: List[List[int]], step: int, union_find):
+        """
+        Update the persistence diagram at the current step.
+        """
+        self.step_counter = step
 
-        return self.component_longivity
+        # Mark live components as active or merged
+        active_roots = set()
+        for component in connected_components:
+            root = union_find.find(component[0])
+            active_roots.add(root)
+            if root not in self.component_lifetimes:
+                self.add_component(root)
+
+        # Update the lifetime of absorbed components
+        for root in list(self.component_lifetimes.keys()):
+            if root not in active_roots:
+                if self.component_lifetimes[root][1] == float("inf"):
+                    self.component_lifetimes[root] = (
+                        self.component_lifetimes[root][0],
+                        step,
+                    )
 
     def finalize(self):
-        # Mark all remaining components with longevity (birth, inf)
-        for vertex in self.live_component_dict:
-            self.component_longivity[vertex] = (
-                self.component_longivity[vertex][0],
-                float("inf"),
-            )
-
-
+        """
+        Finalize the persistence diagram by marking all remaining components with death at infinity.
+        """
+        for root, (birth, death) in self.component_lifetimes.items():
+            if death == float("inf"):
+                self.component_lifetimes[root] = (birth, float("inf"))
