@@ -4,6 +4,22 @@ from torch import Tensor
 from torch_geometric.data import Data
 
 
+from contextlib import contextmanager
+
+
+@contextmanager
+def temporary_edge(nd, i, j):
+    original_neighbors_i = nd.neighbour_dict[i].copy()
+    original_neighbors_j = nd.neighbour_dict[j].copy()
+    nd.add(i, j)
+    try:
+        yield
+    finally:
+        nd.neighbour_dict[i] = original_neighbors_i
+        nd.neighbour_dict[j] = original_neighbors_j
+        nd.memo = {}  # Clear memo cache
+
+
 class NeighbourDict:
     def __init__(self, edge_index: torch.Tensor):
         self.neighbour_dict = {}
@@ -137,10 +153,10 @@ class SDRF:
         """
         # reset the memo to avoid caching the wrong values
         # TODO: make so we don't nuke the entire cache each time
-        self.nd.memo = {}
         while len(self.pending_edges) > 0:
             i, j = self.pending_edges.pop()
             self.ricci_curvature[i, j] = self.nd.ricci_curvature(i, j)
+        self.nd.memo = {}
 
     def add_edge(self, i, j):
         # All the neighbours of neighbours of i or j might have changed due to this modification
@@ -196,29 +212,30 @@ class SDRF:
             #  x is our vector of improvements
             x = []
             edges = []
-            i_receptive_field = self.receptive_field(min_edge[0], r)
-            j_receptive_field = self.receptive_field(min_edge[1], r)
+            i_receptive_field = self.receptive_field(min_edge[0], 1)
+            j_receptive_field = self.receptive_field(min_edge[1], 1)
             print(f"length of i_receptive_field: {len(i_receptive_field)}")
             print(f"length of j_receptive_field: {len(j_receptive_field)}")
             for n in i_receptive_field:
                 for m in j_receptive_field:
-                    edges.append((n, m))
+                    if n != m:
+                        edges.append((n, m))
             print(f"length of edges: {len(edges)}")
 
             i, j = min_edge
+
             for k, l in edges:
-                nd = self.nd
-                # Add the edge to the graph
-                old_rc = nd.ricci_curvature(k, l)
-                nd.add(k, l)
-                new_rc = nd.ricci_curvature(k, l)
-                x.append(new_rc - old_rc)
-                nd.remove(k, l)
+                old_rc = self.nd.ricci_curvature(k, l)
+                with temporary_edge(self.nd, k, l):
+                    new_rc = self.nd.ricci_curvature(k, l)
+                    x.append(new_rc - old_rc)
+
+            return x
 
 
 import time, dataset
 
-citation_data = dataset.CitationDataset("Cora")
+citation_data = dataset.CitationDataset("PubMed")
 sdrf = SDRF(citation_data.get_data().edge_index)
 start = time.time()
 sdrf.sync()
