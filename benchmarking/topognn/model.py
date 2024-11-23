@@ -107,10 +107,14 @@ class TOGL(nn.Module):
 
                 # Compute connected components
                 cc_start = time.time()
-                uf = UnionFind(n_nodes)
-                for edge in graph_edges:
-                    uf.union(edge[0] - 1, edge[1] - 1)  # Union using 0-based indexing
-                components = uf.connected_components()
+                visited = torch.zeros(n_nodes, dtype=torch.bool)
+                components = []
+                for k in indices[: j + 1] + 1:
+                    if not visited[k - 1]:
+                        component = []
+                        self.dfs(k, visited, component, graph_edges)
+                        if component:
+                            components.append(component)
                 part_times['connected_components'] += time.time() - cc_start
 
                 # Update persistence diagram with current components
@@ -188,36 +192,3 @@ class PersistenceDiagram:
             )
 
 
-class UnionFind:
-    def __init__(self, n):
-        self.parent = torch.arange(n, dtype=torch.long)  # Parent pointers
-        self.rank = torch.zeros(n, dtype=torch.long)     # Rank for union by rank
-
-    def find(self, x):
-        # Path compression
-        if self.parent[x] != x:
-            self.parent[x] = self.find(self.parent[x])
-        return self.parent[x]
-
-    def union(self, x, y):
-        # Union by rank
-        root_x = self.find(x)
-        root_y = self.find(y)
-        if root_x != root_y:
-            if self.rank[root_x] > self.rank[root_y]:
-                self.parent[root_y] = root_x
-            elif self.rank[root_x] < self.rank[root_y]:
-                self.parent[root_x] = root_y
-            else:
-                self.parent[root_y] = root_x
-                self.rank[root_x] += 1
-
-    def connected_components(self):
-        # Collect all components based on their root
-        component_dict = {}
-        for node in range(len(self.parent)):
-            root = self.find(node)
-            if root not in component_dict:
-                component_dict[root] = []
-            component_dict[root].append(node + 1)  # Convert to 1-based indexing
-        return list(component_dict.values())

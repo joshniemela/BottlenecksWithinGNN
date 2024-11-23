@@ -1,9 +1,10 @@
 from model import TOGL
 
 import torch
+from torch_geometric.datasets import Planetoid
 
 
-x = torch.rand(7, 2)
+x = torch.rand(6, 2)
 edge_list = torch.tensor(
     [
         [2, 4, 1, 4, 5, 4, 6, 1, 2, 3, 2, 6, 3, 5],
@@ -13,5 +14,12 @@ edge_list = torch.tensor(
 
 togl = TOGL(2, 2, 2, 2, "sum")
 
-nfiltrations = togl.n_filtrations
 print(togl.generate_persistence_diagram_dim0(x, edge_list))
+
+dataset = Planetoid(root='/tmp/PubMed', name='PubMed')
+data = dataset[0]
+
+print(data)
+
+togl = TOGL(500, 2, 2, 2, "sum")
+print(togl.generate_persistence_diagram_dim0(data.x, data.edge_index))
