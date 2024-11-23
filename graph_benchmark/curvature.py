@@ -17,18 +17,15 @@ def temporary_edge(nd, i, j):
     finally:
         nd.neighbour_dict[i] = original_neighbors_i
         nd.neighbour_dict[j] = original_neighbors_j
-        nd.memo = {}  # Clear memo cache
 
 
 class NeighbourDict:
     def __init__(self, edge_index: torch.Tensor):
-        self.neighbour_dict = {}
+        self.neighbour_dict = []
         self.memo = {}
-        self.cache_misses = 0
-        self.cache_hits = 0
 
         for i in range(edge_index.max().item() + 1):
-            self.neighbour_dict[i] = set()
+            self.neighbour_dict.append(set())
         for i, j in zip(edge_index[0], edge_index[1]):
             self.neighbour_dict[int(i)].add(int(j))
 
@@ -63,7 +60,6 @@ class NeighbourDict:
         Returns the neighbours of i that are also neighbours of j (4-cycles)
         """
         if (i, j) in self.memo:
-            self.cache_hits += 1
             return self.memo[(i, j)]
         # Bad nodes are all triangle nodes, i and j
         bad_nodes = self.three_cycles(i, j) | {i, j}
@@ -79,7 +75,6 @@ class NeighbourDict:
                 four_cycle_nodes.add(k)
 
         self.memo[(i, j)] = four_cycle_nodes
-        self.cache_misses += 1
 
         return four_cycle_nodes
 
@@ -153,10 +148,10 @@ class SDRF:
         """
         # reset the memo to avoid caching the wrong values
         # TODO: make so we don't nuke the entire cache each time
+        self.nd.memo = {}
         while len(self.pending_edges) > 0:
             i, j = self.pending_edges.pop()
             self.ricci_curvature[i, j] = self.nd.ricci_curvature(i, j)
-        self.nd.memo = {}
 
     def add_edge(self, i, j):
         # All the neighbours of neighbours of i or j might have changed due to this modification
@@ -193,7 +188,7 @@ class SDRF:
             reachable_nodes = self.nd.neighbours(reachable_nodes)
         return reachable_nodes
 
-    def preprocess(self, r, temperature, c_max, max_iter):
+    def preprocess(self, temperature, c_max, max_iter):
         """
         Performs the SDRF algorithm on the graph given the receptive field radius,
         temperature, uppper bound on the Ricci curvature, and max iterations
@@ -207,36 +202,43 @@ class SDRF:
                     min_rc = self.ricci_curvature[i, j]
                     min_edge = (i, j)
 
-            print(f"New minimum: {min_edge}, Ricci curvature: {min_rc}")
-
-            #  x is our vector of improvements
-            x = []
             edges = []
-            i_receptive_field = self.receptive_field(min_edge[0], 1)
-            j_receptive_field = self.receptive_field(min_edge[1], 1)
+            i_receptive_field = self.nd[min_edge[0]]
+            j_receptive_field = self.nd[min_edge[1]]
             print(f"length of i_receptive_field: {len(i_receptive_field)}")
             print(f"length of j_receptive_field: {len(j_receptive_field)}")
             for n in i_receptive_field:
                 for m in j_receptive_field:
                     if n != m:
                         edges.append((n, m))
-            print(f"length of edges: {len(edges)}")
-
             i, j = min_edge
 
-            for k, l in edges:
-                old_rc = self.nd.ricci_curvature(k, l)
+            #  x is our vector of improvements
+            x = torch.zeros(len(edges))
+            old_rc = self.ricci_curvature[i, j]
+            for idx, (k, l) in enumerate(edges):
+                self.nd.memo = {}
                 with temporary_edge(self.nd, k, l):
-                    new_rc = self.nd.ricci_curvature(k, l)
-                    x.append(new_rc - old_rc)
+                    new_rc = self.nd.ricci_curvature(i, j)
+                    x[idx] = new_rc - old_rc
 
             return x
 
 
 import time, dataset
 
-citation_data = dataset.CitationDataset("PubMed")
+citation_data = dataset.CitationDataset("Cora")
 sdrf = SDRF(citation_data.get_data().edge_index)
 start = time.time()
 sdrf.sync()
+print(time.time() - start)
+
+# turn edge index into sparse
+sparse = torch.sparse_coo_tensor(
+    citation_data.get_data().edge_index,
+    torch.ones(citation_data.get_data().edge_index.shape[1]),
+)
+
+start = time.time()
+sdrf.preprocess(1, 1, 10)
 print(time.time() - start)
