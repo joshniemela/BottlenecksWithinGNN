@@ -251,15 +251,15 @@ To compute the ricci curvature, we must compute three non-trivial values for a g
 For the 3-cycles we noticed that this was equivalent to finding a mutual neighbour of i and j.
 The 4-cycle sets were more complicated to compute, we did this by constructing a set, \(\{i, j\} \cup \text{triangles}(i, j)\). We then found the neighbours of \(i\), and removed the bad nodes.
 For each of these candidate nodes, we then found the neighbours, removed the bad nodes again, and then added the nodes that yielded a path to \(j\).
-The maximum degeneracy for 4-cycles was computed in a similar way as in CITATION CURVATURE using an adjacency list instead of an adjacency matrix.
+The maximum degeneracy for 4-cycles and 4-cycles themselves were computed using DFS and an adjacency list.
 
-The ricci curvature is relatively expensive to compute, and we need to potentially compute it for all the edges in the graph every time we add or remove an edge.
-This is not feasible for large graphs and we therefore looked at how to make the computation of subsequent ricci curvatures faster after adding or removing an edge.
-We noticed that the ricci curvature depends on edges only 2-hops away from the two nodes we are computing the ricci curvature between. 
-This means once we update or remove an edge, we can compute the 2-hop transitive closure for the two affected nodes, mark them as affected and then recompute the ricci curvatures for all the affected edges starting at nodes inside the transitive closure.
+The ricci curvature is relatively expensive to compute, and we need to recompute it for all edges in \(B_2(i) \cup B_2(j)\) every time we add or remove an edge \(i \sim j\). 
+When computing the improvement vector \(x\) for a given edge, we need to compute the ricci curvatures for all edges possible between \(B_1(i) \times B_1(j)\). 
+This quickly becomes infeasible for dense graphs or large graphs due to cache utilisation.
 
-This is significantly more efficient (Each subsequent edge addition or removal costs \(O(\mu_d^2)\)), where \(\mu_d\) is the average degree of the graph. The initial step takes \(O(|E|\) time and without the optimisation, all subsequent changes would have taken the same time.
-We also did an additional optimisation by memoising the computations of 4-cycles.
+For most datasets we can assume the receptive field grows expoentially, and combined with the fact that we are searching potentially the entire graph, we get very poor cache utilisation.
+As noted by [https://arxiv.org/pdf/2212.02374], the Balanced Forman Curvature (BFC) metric is very expensive and they suggested a different
+approach (their own Jost-Liu Curvature). This approach dissapointingly yields resuls comparable to the baseline GCN.
 
 \subsection{TOGL}
 
