@@ -6,28 +6,59 @@ from tqdm import tqdm
 import time
 
 class PersistentHomologyFiltrationUnionFind:
-    def __init__(self, size: int, indices: torch.Tensor) -> None:
-        self.parent = torch.arange(size)  # Initialize the Union-Find parent array
-        self.rank = torch.zeros(size, dtype=torch.long)
-        self.rank[indices] = torch.arange(size)
+    def __init__(self, indices: torch.Tensor) -> None:
+        self.parent = torch.arange(indices.shape[1]).repeat(indices.shape[0])
+        self.rank = torch.zeros(indices.shape[0] * indices.shape[1], dtype=torch.long)
+        self.rank[indices] = torch.arange(indices.shape[1]).repeat(indices.shape[0])
 
-    def find(self, node: torch.Tensor) -> torch.Tensor:
-        if self.parent[node] != node:
-            self.parent[node] = self.find(self.parent[node])  # Path compression
-        return self.parent[node]
+    def find(self, nodes: torch.Tensor) -> torch.Tensor:
+        """
+        Vectorized version of the `find` operation for multiple nodes.
 
-    def union(self, node1: torch.Tensor, node2: torch.Tensor):
-        root1 = self.find(node1).clone()
-        root2 = self.find(node2).clone()
+        Args:
+            nodes: A 1D tensor of node indices to find the root for.
 
-        if (root1 != root2):
-            # Union by rank, but rank is based on the sorted indices
-            if (self.rank[root1] < self.rank[root2]):
-                self.parent[root2] = root1
-            else:  # there is no need to check for equality, since the indices are unique
-                self.parent[root1] = root2
+        Returns:
+            A 1D tensor of root nodes corresponding to the input nodes.
+        """
+        while True:
+            # Identify the parents of the current nodes
+            parents = self.parent[nodes]
+            
+            # Check if all nodes are their own parents (i.e., they are roots)
+            done = parents == nodes
+            
+            if done.all():
+                break
+
+            # Update the parent for path compression
+            self.parent[nodes] = self.parent[parents]
+            
+            # Move to the next set of nodes (their parents)
+            nodes = parents
+
+        return nodes
+
+    def union(self, nodes1: torch.Tensor, nodes2: torch.Tensor):
+        roots1 = self.find(nodes1).clone()  # Find roots for all nodes in node1
+        roots2 = self.find(nodes2).clone()  # Find roots for all nodes in node2
+
+        # Create a mask for where the roots are different
+        different_roots_mask = roots1 != roots2
+
+        if different_roots_mask.any():  # Check if there are any different roots
+            # Get the ranks of the roots
+            ranks1 = self.rank[roots1]
+            ranks2 = self.rank[roots2]
+
+            # Create a mask for the union by rank
+            rank_mask = ranks1 < ranks2 
+
+            # Update parents based on the rank mask
+            self.parent[roots2[rank_mask]] = roots1[rank_mask]  # root2 becomes child of root1 where rank1 < rank2
+            self.parent[roots1[~rank_mask]] = roots2[~rank_mask]  # root1 becomes child of root2 where rank1 >= rank2
         
-        return root1, root2, self.parent[root1]
+        return roots1, roots2, self.parent[roots1]
 
 
 class TOGL(nn.Module):
@@ -110,19 +141,57 @@ class TOGL(nn.Module):
 
 
 class PersistenceDiagram:
-    def __init__(self, n_nodes: int):
-        self.component_lifetimes = torch.stack((torch.arange(n_nodes), torch.zeros(n_nodes)), dim=1)  # key: root node, value: (birth, death)
-        self.current_components = {}  # key: node, value: root node
-        self.step_counter = 0  # Track the current step in the filtration
-
-
-    def merge_components(self, node1: torch.Tensor, node2: torch.Tensor, indices: torch.Tensor, union_find: PersistentHomologyFiltrationUnionFind):
+    def __init__(self, n_nodes: int, n_filtrations: int) -> None:
         """
-        Merge two components. The component of node2 is absorbed into node1's component.
+        Initialize the persistence diagram.
+
+        Args:
+            n_nodes: Number of nodes in the graph.
+            n_filtrations: Number of filtration dimensions to track.
+        """
+        # Lifetimes for each dimension and filtration
+        self.component_lifetimes = torch.zeros((n_filtrations, n_nodes, 2), dtype=torch.long)
+        self.component_lifetimes[:, :, 0] = torch.arange(n_nodes).unsqueeze(0).repeat(n_filtrations, 1)
+        self.step_counter = torch.zeros(1, dtype=torch.long)
+
+
+    def merge_components(
+        self,
+        nodes1: torch.Tensor,
+        nodes2: torch.Tensor,
+        indices: torch.Tensor,
+        union_find: PersistentHomologyFiltrationUnionFind,
+    ):
+        """
+        Vectorized version of merge_components to handle batches of nodes.
+
+        Args:
+            nodes1: A tensor of node indices in the first component.
+            nodes2: A tensor of node indices in the second component.
+            indices: A tensor containing sorted node indices by filtration order.
+            union_find: A PersistentHomologyFiltrationUnionFind instance.
         """
 
         # Update the Union-Find structure
-        root1, root2, new_root = union_find.union(node1, node2)
+        roots1, roots2, new_roots = union_find.union(nodes1, nodes2)
+
+        # Create a mask for where the roots are different
+        different_roots_mask = roots1 != roots2
+
+        if different_roots_mask.any():  # Check if there are any different roots
+
+            # Determine absorbed roots
+            absorbed_roots = torch.where(
+                new_roots == roots2, roots1, roots2
+            )
+
+            absorbed_roots_mask = absorbed_roots == roots1:
+            self.
+
+
+
+
+
 
         if root1 == root2:
             return
