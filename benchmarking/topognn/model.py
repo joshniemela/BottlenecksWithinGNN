@@ -140,20 +140,20 @@ class TOGL(nn.Module):
         active_nodes = torch.zeros_like(X, dtype=torch.bool)
         pbar = tqdm(total=n_nodes, desc="Filtration", leave=True)
 
-        for step, vertex in enumerate(indices.t()):
+        for step, vertecies in enumerate(indices.t()):
 
-            active_nodes[torch.arange(vertex.shape[0]), vertex] = True
+            active_nodes[torch.arange(vertecies.shape[0]), vertecies] = True
             pd.step_counter = step
 
-            neighbors = edge_list[1][
-                edge_list[0] == vertex
-            ]  # Get neighbors of the current node
-            active_neighbors = neighbors[
-                active_nodes[neighbors]
-            ]  # Filter out nodes not yet added to the filtration
+            for filtration, vertex in enumerate(vertecies):
+                neighbors = edge_list[1][
+                    edge_list[0] == vertex
+                ] 
 
-            for neighbor in active_neighbors:
-                pd.merge_components(vertex, neighbor, indices, uf)
+                active_neighbors = neighbors[active_nodes[filtration][neighbors]]
+
+                for neighbor in active_neighbors:
+                    pd.merge_components(vertecies, neighbor, indices, uf)
 
             pbar.update(1)
 
