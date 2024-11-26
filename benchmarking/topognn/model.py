@@ -5,11 +5,19 @@ from torch_geometric.data import Data
 from tqdm import tqdm
 import time
 
+
 class PersistentHomologyFiltrationUnionFind:
-    def __init__(self, indices: torch.Tensor) -> None:
-        self.parent = torch.arange(indices.shape[1]).repeat(indices.shape[0])
-        self.rank = torch.zeros(indices.shape[0] * indices.shape[1], dtype=torch.long)
-        self.rank[indices] = torch.arange(indices.shape[1]).repeat(indices.shape[0])
+    def __init__(self, sorted_indices: torch.Tensor) -> None:
+        self.parent = torch.arange(sorted_indices.shape[1]).repeat(
+            sorted_indices.shape[0], 1
+        )
+        self.rank = torch.zeros_like(self.parent)
+        row_indices = (
+            torch.arange(sorted_indices.shape[1])
+            .view(1, -1)
+            .repeat(sorted_indices.shape[0], 1)
+        )
+        self.rank.scatter_(1, sorted_indices, row_indices)
 
     def find(self, nodes: torch.Tensor) -> torch.Tensor:
         """
@@ -24,16 +32,16 @@ class PersistentHomologyFiltrationUnionFind:
         while True:
             # Identify the parents of the current nodes
             parents = self.parent[nodes]
-            
+
             # Check if all nodes are their own parents (i.e., they are roots)
             done = parents == nodes
-            
+
             if done.all():
                 break
 
             # Update the parent for path compression
             self.parent[nodes] = self.parent[parents]
-            
+
             # Move to the next set of nodes (their parents)
             nodes = parents
 
@@ -52,12 +60,16 @@ class PersistentHomologyFiltrationUnionFind:
             ranks2 = self.rank[roots2]
 
             # Create a mask for the union by rank
-            rank_mask = ranks1 < ranks2 
+            rank_mask = ranks1 < ranks2
 
             # Update parents based on the rank mask
-            self.parent[roots2[rank_mask]] = roots1[rank_mask]  # root2 becomes child of root1 where rank1 < rank2
-            self.parent[roots1[~rank_mask]] = roots2[~rank_mask]  # root1 becomes child of root2 where rank1 >= rank2
-        
+            self.parent[roots2[rank_mask]] = roots1[
+                rank_mask
+            ]  # root2 becomes child of root1 where rank1 < rank2
+            self.parent[roots1[~rank_mask]] = roots2[
+                ~rank_mask
+            ]  # root1 becomes child of root2 where rank1 >= rank2
+
         return roots1, roots2, self.parent[roots1]
 
 
@@ -97,45 +109,59 @@ class TOGL(nn.Module):
         """
         return self.filtrations(X)
 
-    def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> List[torch.Tensor]:
+    def generate_persistence_diagram_dim0(
+        self, X: torch.Tensor, edge_list: torch.Tensor
+    ) -> List[torch.Tensor]:
         """
         Generates 0-dimensional persistence diagrams using the updated PersistenceDiagram class.
 
         Args:
-            X: Node features of shape (n_nodes, n_filtrations).
+            X: Node features of shape (n_filtrations, n_nodes).
             edge_list: Edge list of shape (2, n_edges).
 
         Returns:
             List of tensors, each representing the persistence diagram for one filtration.
         """
-        n_nodes = X.shape[0]
+        n_nodes = X.shape[1]
+        n_filtrations = X.shape[0]
         persistence_diagrams = []
 
-        for i in range(self.n_filtrations):
-            _, indices = torch.sort(X[:, i])  # Sort nodes by filtration value for current filtration
-            uf = PersistentHomologyFiltrationUnionFind(n_nodes, indices)  # Initialize Union-Find for connected components
-            pd = PersistenceDiagram(n_nodes)  # Initialize the persistence diagram
+        _, indices = torch.sort(
+            X, dim=1
+        )  # Sort nodes by filtration value for current filtration
 
-            active_nodes = torch.zeros(n_nodes, dtype=torch.bool, device=X.device)
-            pbar = tqdm(total=n_nodes, desc=f"Filtration {i}", leave=True)
+        uf = PersistentHomologyFiltrationUnionFind(
+            indices
+        )  # Initialize Union-Find for connected components
+        pd = PersistenceDiagram(
+            n_nodes, n_filtrations
+        )  # Initialize the persistence diagram
 
-            for step, vertex in enumerate(indices):
-                active_nodes[vertex] = True
-                pd.step_counter = step
+        active_nodes = torch.zeros_like(X, dtype=torch.bool)
+        pbar = tqdm(total=n_nodes, desc="Filtration", leave=True)
 
-                neighbors = edge_list[1][edge_list[0] == vertex] # Get neighbors of the current node
-                active_neighbors = neighbors[active_nodes[neighbors]] # Filter out nodes not yet added to the filtration
-                
-                for neighbor in active_neighbors:
-                    pd.merge_components(vertex, neighbor, indices, uf)
+        for step, vertex in enumerate(indices.t()):
 
-                pbar.update(1)
+            active_nodes[torch.arange(vertex.shape[0]), vertex] = True
+            pd.step_counter = step
 
-            pbar.close()
+            neighbors = edge_list[1][
+                edge_list[0] == vertex
+            ]  # Get neighbors of the current node
+            active_neighbors = neighbors[
+                active_nodes[neighbors]
+            ]  # Filter out nodes not yet added to the filtration
 
-            # Finalize the persistence diagram and convert component lifetimes to tensor
-            pd.finalize()
-            persistence_diagrams.append(pd.component_lifetimes.clone())
+            for neighbor in active_neighbors:
+                pd.merge_components(vertex, neighbor, indices, uf)
+
+            pbar.update(1)
+
+        pbar.close()
+
+        # Finalize the persistence diagram and convert component lifetimes to tensor
+        pd.finalize()
+        persistence_diagrams.append(pd.component_lifetimes.clone())
 
         return persistence_diagrams
 
@@ -150,10 +176,13 @@ class PersistenceDiagram:
             n_filtrations: Number of filtration dimensions to track.
         """
         # Lifetimes for each dimension and filtration
-        self.component_lifetimes = torch.zeros((n_filtrations, n_nodes, 2), dtype=torch.long)
-        self.component_lifetimes[:, :, 0] = torch.arange(n_nodes).unsqueeze(0).repeat(n_filtrations, 1)
+        self.component_lifetimes = torch.zeros(
+            (n_filtrations, n_nodes, 2), dtype=torch.long
+        )
+        self.component_lifetimes[:, :, 0] = (
+            torch.arange(n_nodes).unsqueeze(0).repeat(n_filtrations, 1)
+        )
         self.step_counter = torch.zeros(1, dtype=torch.long)
-
 
     def merge_components(
         self,
@@ -181,30 +210,16 @@ class PersistenceDiagram:
         if different_roots_mask.any():  # Check if there are any different roots
 
             # Determine absorbed roots
-            absorbed_roots = torch.where(
-                new_roots == roots2, roots1, roots2
-            )
+            absorbed_roots = torch.where(new_roots == roots2, roots1, roots2)
 
-            absorbed_roots_mask = absorbed_roots == roots1:
-            self.
-
-
-
-
-
-
-        if root1 == root2:
-            return
-
-        # Determine which component survives
-        absorbed_root = root1 if new_root == root2 else root2
-
-        # Update death time for the absorbed component
-        self.component_lifetimes[torch.where(indices == absorbed_root)[0], 1] = self.step_counter
-
+            # Update the persistence diagram
+            absorbed_indexes = torch.where(indices == absorbed_roots.unsqueeze(1))
+            self.component_lifetimes[absorbed_indexes] = self.step_counter
 
     def finalize(self):
         """
         Finalize the persistence diagram by marking all remaining components with death at infinity.
         """
-        self.component_lifetimes[self.component_lifetimes[:,1] == 0, 1] = float("inf")
+        self.component_lifetime[self.component_lifetime[:, :, 1] == 0] = (
+            self.step_counter
+        )
