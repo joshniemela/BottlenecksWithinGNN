@@ -244,7 +244,12 @@ The results of the tree neighbours-match experiment show that contrary to the fi
 We computed all the connected components of the graph, then for each connected component, we computed the cartesian product of the nodes and added all these as edges to the graph.
 This yielded bad results (source), we will change this to a better implementation after implmenting the TOGL and SDRF benchmarks.
 
-
+\subsection{Global aggregating GCN (fully adjacent 2.0)}
+We connect all nodes to a global node, \(x_G\), and we then let all nodes interact with this node, the edge weights are dynamic.
+\begin{align}
+  x^{l+1}_i &= \sigma \left(w^l_1 x_i + w^l_2 \cdot \text{AGG}\left(\{x_j: j \in \mathcal{N}(i) \} \right) + w^l_3(x_i, x_G) x_G  \right)\\
+  x^{l+1}_G &= \sigma \left(w_G \cdot \text{AGG}\left(\{x_j: j \in \mathcal{V}\} \right) + b_G\right)
+\end{align}
 \subsection{SDRF}
 To compute the ricci curvature, we must compute three non-trivial values for a given edge (i~j). The number of 3-cycles, the number of 4-cycles without diagonals, and the maximum number of times a specific node is visited with a 4-cycle from i to j (degeneracy).
 
