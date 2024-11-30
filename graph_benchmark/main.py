@@ -7,6 +7,7 @@ from torch_geometric.data import Data
 from fully_adjacent import fully_connect
 from torch_geometric.nn.aggr import SoftmaxAggregation, SetTransformerAggregation
 from torch import nn
+from new_fully_adjacent import GlobalSAGEConv
 
 
 class GCN(nn.Module):
@@ -32,7 +33,8 @@ class GCN(nn.Module):
         for _ in range(num_hidden_layers):
             self.layer_norms.append(nn.LayerNorm(hidden_dim))
 
-        self.output_layer = GCNConv(hidden_dim, output_dim, bias=False)
+        self.output_layer = GlobalSAGEConv(hidden_dim, output_dim, bias=True)
+        # self.output_layer = GCNConv(hidden_dim, output_dim, bias=True)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -76,7 +78,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load dataset (Cora by default)
-    dataset = CitationDataset("Cora", transform=fully_connect)
+    dataset = CitationDataset("CiteSeer")
 
     data = dataset.get_data().to(device)
 
@@ -86,11 +88,11 @@ def main():
         hidden_dim=128,
         output_dim=dataset.num_classes,
         num_hidden_layers=2,
-        use_fully_adj=True,
+        use_fully_adj=False,
     ).to(device)
 
     # Setup training
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.002, weight_decay=5e-4)
 
     # Training loop
     for epoch in range(1000):
