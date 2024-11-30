@@ -244,12 +244,24 @@ The results of the tree neighbours-match experiment show that contrary to the fi
 We computed all the connected components of the graph, then for each connected component, we computed the cartesian product of the nodes and added all these as edges to the graph.
 This yielded bad results (source), we will change this to a better implementation after implmenting the TOGL and SDRF benchmarks.
 
-\subsection{Global aggregating GCN (fully adjacent 2.0)}
-We connect all nodes to a global node, \(x_G\), and we then let all nodes interact with this node, the edge weights are dynamic.
+\subsection{Global aggregating GCN}
+We suspect that over-squashing is caused by the fact that long range interactions are being 
+watered out by the neighbours around the path of information flow. 
+We therefore propose adding a global node to collect all the non-local information
+from the graph. This will make so that the nodes have to send less distinct information
+around the graph, and have less information that might be lost in the form of
+over-squashing.
+
 \begin{align}
-  x^{l+1}_i &= \sigma \left(w^l_1 x_i + w^l_2 \cdot \text{AGG}\left(\{x_j: j \in \mathcal{N}(i) \} \right) + w^l_3(x_i, x_G) x_G  \right)\\
-  x^{l+1}_G &= \sigma \left(w_G \cdot \text{AGG}\left(\{x_j: j \in \mathcal{V}\} \right) + b_G\right)
+  x^{l+1}_i &= w^l_1 x^l_i + w^l_2 \cdot \text{AGG}\left(\{x^l_j: j \in \mathcal{N}(i) \} \right) + f^l(x^l_i, x^l_G) + b^l\\
+  x^{l+1}_G &= \text{AGG}\left(\{x^l_j: j \in \mathcal{V}\} \right)
 \end{align}
+In this setup, we have two trainable weights, one for the local aggregation, and one for the self loop. Furthermore we have a trainable bias. Lastly there is \(f^l\), this is some trainable differentiable function, in our case we let it be a two-layer MLP with tanh activation.
+
+The global node is equivalent to performing a global aggregation of the graph.
+We can then compute a weighting for information from the global node to the local nodes which
+is then added to each of the local nodes.
+
 \subsection{SDRF}
 To compute the ricci curvature, we must compute three non-trivial values for a given edge (i~j). The number of 3-cycles, the number of 4-cycles without diagonals, and the maximum number of times a specific node is visited with a 4-cycle from i to j (degeneracy).
 
