@@ -11,3 +11,4 @@ data/raw/qm9_v3.pt
 */datasets
 .direnv
 *.png
+datasets/*
