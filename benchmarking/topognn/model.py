@@ -1,10 +1,9 @@
 from typing import List
-from torch import nn
 import torch
 from torch_geometric.data import Data
 from tqdm import tqdm
 import time
-
+import torch.nn as nn
 
 class PersistentHomologyFiltrationUnionFind:
     def __init__(self, sorted_indices: torch.Tensor) -> None:
@@ -31,10 +30,10 @@ class PersistentHomologyFiltrationUnionFind:
         """
         while True:
             # Identify the parents of the current nodes
-            parents = self.parent[nodes]
+            parents = self.parent[nodes[0], nodes[1]]
 
             # Check if all nodes are their own parents (i.e., they are roots)
-            done = parents == nodes
+            done = parents == nodes[1, :]
 
             if done.all():
                 break
@@ -48,29 +47,29 @@ class PersistentHomologyFiltrationUnionFind:
         return nodes
 
     def union(self, nodes1: torch.Tensor, nodes2: torch.Tensor):
-        roots1 = self.find(nodes1).clone()  # Find roots for all nodes in node1
-        roots2 = self.find(nodes2).clone()  # Find roots for all nodes in node2
+        roots1 = self.find(nodes1).clone()  # Find roots for all nodes in nodes1
+        roots2 = self.find(nodes2).clone()  # Find roots for all nodes in nodes2
 
         # Create a mask for where the roots are different
-        different_roots_mask = roots1 != roots2
+        different_roots_mask = roots1[1, :] != roots2[1, :]
 
         if different_roots_mask.any():  # Check if there are any different roots
             # Get the ranks of the roots
-            ranks1 = self.rank[roots1]
-            ranks2 = self.rank[roots2]
+            ranks1 = self.rank[roots1[0], roots1[1]]
+            ranks2 = self.rank[roots2[0], roots2[1]]
 
             # Create a mask for the union by rank
             rank_mask = ranks1 < ranks2
 
             # Update parents based on the rank mask
-            self.parent[roots2[rank_mask]] = roots1[
+            self.parent[roots2[0, :][rank_mask], roots2[1, :][rank_mask]] = roots1[1, :][
                 rank_mask
             ]  # root2 becomes child of root1 where rank1 < rank2
-            self.parent[roots1[~rank_mask]] = roots2[
+            self.parent[roots1[0, :][~rank_mask], roots1[1, :][~rank_mask]] = roots2[1, :][
                 ~rank_mask
             ]  # root1 becomes child of root2 where rank1 >= rank2
 
-        return roots1, roots2, self.parent[roots1]
+        return roots1, roots2, roots1[1, :]
 
 
 class TOGL(nn.Module):
@@ -153,7 +152,9 @@ class TOGL(nn.Module):
                 active_neighbors = neighbors[active_nodes[filtration][neighbors]]
 
                 for neighbor in active_neighbors:
-                    pd.merge_components(vertecies, neighbor, indices, uf)
+                    neighbor_index = torch.tensor([ [filtration], [neighbor] ])
+                    vertex_index = torch.tensor([ [filtration], [vertex] ])
+                    pd.merge_components(vertex_index, neighbor_index, indices, uf)
 
             pbar.update(1)
 
