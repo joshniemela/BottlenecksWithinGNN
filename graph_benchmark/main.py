@@ -70,7 +70,9 @@ def test(model, data):
     return test_acc
 
 
-def add_run_to_csv(dataset_name, use_fully_adj, num_hidden_layers, learning_rate):
+def add_run_to_csv(
+    dataset_name, use_fully_adj, num_hidden_layers, learning_rate, score, time_taken
+):
     csv_file_path = f"results/{dataset_name}.csv"
     csv_file = Path(csv_file_path)
 
@@ -83,6 +85,8 @@ def add_run_to_csv(dataset_name, use_fully_adj, num_hidden_layers, learning_rate
                     "Use Fully Adj",
                     "Num Hidden Layers",
                     "Learning Rate",
+                    "Score",
+                    "Time Taken",
                 ]
             )
 
@@ -94,22 +98,43 @@ def add_run_to_csv(dataset_name, use_fully_adj, num_hidden_layers, learning_rate
                 use_fully_adj,
                 num_hidden_layers,
                 learning_rate,
+                score,
+                time_taken,
             ]
         )
 
 
+import time
+import random
+
+
 def sweep_all():
+    param_tuples = []
     for dataset_name in ["Cora", "CiteSeer", "PubMed"]:
         for use_fully_adj in [True, False]:
             for num_hidden_layers in [1, 2, 3]:
                 for learning_rate in [0.001, 0.002, 0.005, 0.001]:
                     for i in range(15):
-                        sweep(
-                            dataset_name,
-                            use_fully_adj,
-                            num_hidden_layers,
-                            learning_rate,
+                        param_tuples.append(
+                            (
+                                dataset_name,
+                                use_fully_adj,
+                                num_hidden_layers,
+                                learning_rate,
+                            )
                         )
+
+    # randomise
+    random.shuffle(param_tuples)
+
+    j = 0
+    start = time.time()
+    for param_tuple in param_tuples:
+        sweep(*param_tuple)
+        j += 1
+        # compute eta till finished
+        eta = (time.time() - start) / (j + 1) * (1080 - j) / 60
+        print(f"{j} of 1080 done, eta: {eta:.2f} minutes")
 
 
 def sweep(dataset_name, use_fully_adj, num_hidden_layers, learning_rate):
@@ -139,6 +164,7 @@ def sweep(dataset_name, use_fully_adj, num_hidden_layers, learning_rate):
     best_acc = 0
     epochs_no_improvement = 0
     # Training loop
+    start_time = time.time()
     for epoch in range(2000):
         loss = train(model, data, optimizer)
         test_acc = test(model, data)
@@ -151,10 +177,18 @@ def sweep(dataset_name, use_fully_adj, num_hidden_layers, learning_rate):
         if epochs_no_improvement == 300:
             break
 
+    time_taken = time.time() - start_time
     print(
         f"Test Acc: {best_acc:.4f}, Params: {dataset_name}, {use_fully_adj}, {num_hidden_layers}, {learning_rate}"
     )
-    add_run_to_csv(dataset_name, use_fully_adj, num_hidden_layers, learning_rate)
+    add_run_to_csv(
+        dataset_name,
+        use_fully_adj,
+        num_hidden_layers,
+        learning_rate,
+        best_acc,
+        time_taken,
+    )
 
 
 if __name__ == "__main__":
