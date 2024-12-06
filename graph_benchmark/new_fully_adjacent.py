@@ -7,7 +7,7 @@ from torch import Tensor
 from torch_geometric.typing import Adj, OptPairTensor, OptTensor, Size
 from typing import Final, Tuple, Union
 from torch_geometric.nn.pool import global_mean_pool
-from torch import tanh
+from torch import tanh, relu
 from torch import nn
 
 
@@ -42,9 +42,8 @@ class GlobalSAGEConv(MessagePassing):
 
         # Global node representation
         self.global_weighter = NonLinearWeighter(
-            2 * in_channels, 512, in_channels, bias=bias
+            2 * in_channels, 512, out_channels, bias=bias
         )
-        self.projector = Linear(in_channels, out_channels, bias=False)
 
         self.reset_parameters()
 
@@ -71,14 +70,14 @@ class GlobalSAGEConv(MessagePassing):
         if x_r is not None:
             out += self.self_lin(x_r)
 
-        # global_node = global_mean_pool(x, batch)
-        global_node = torch.mean(x, dim=0, keepdim=True)
+            # global_node = global_mean_pool(x, batch)
+            global_node = tanh(torch.mean(x, dim=0, keepdim=True))
 
         # Each node gets the global node added scaled by the weighter
         global_weights = self.global_weighter(
             torch.cat([x, global_node.expand_as(x)], dim=-1)
         )
 
-        out = out + self.projector(global_weights)
+        out = out + global_weights
 
-        return out
+        return tanh(out)
