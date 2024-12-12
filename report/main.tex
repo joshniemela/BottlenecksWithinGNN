@@ -262,6 +262,9 @@ The global node is equivalent to performing a global aggregation of the graph.
 We can then compute a weighting for information from the global node to the local nodes which
 is then added to each of the local nodes.
 
+For aggregation, we used the mean aggregator. This setup yielded worse results for Cora,
+very similar results for CiteSeer and better results for PubMed.
+
 \subsection{SDRF}
 To compute the ricci curvature, we must compute three non-trivial values for a given edge (i~j). The number of 3-cycles, the number of 4-cycles without diagonals, and the maximum number of times a specific node is visited with a 4-cycle from i to j (degeneracy).
 
@@ -281,6 +284,50 @@ approach (their own Jost-Liu Curvature). This approach dissapointingly yields re
 \subsection{TOGL}
 
 Performance wise we notice that the Persistance diagram computation runs the same, when single threaded, on both a low end cpu with just 3MB og cache and a midrange cpu core with 16MB cache. This confirms our suspicion that the random ordering of nodes in the filtration process, is maximally not spacially local. This is because of the uniform sampling of the nodes across the datastructure which stores the graph. Although the filtration could in principle be computed with high effeciency, in practice, the computation is done from the very slow system RAM and only sequencially, since the algorithm requires information from the previous step to compute the next step. This makes it inherently disadvantagous to algorithm with high spacial locality and algorithms relying on vectorizable operations.
+
+\subsection{A framework for more reproducible benchmarks and experiments}
+Hyperparameters must be chosen so that they are orthogonal (andrew ng) to each other.
+Heuristic and empirical approaches such as early stopping or SGD with restarts are good for 
+finding a good set of hyperparameters as quickly as possible, but they are not
+reproducible nor do they provide the academic community with 
+any significant insights into the performance of the model or the data.
+
+Instead of early stopping which affects (andrew ng blah blah bias and variance)
+we can uuse a more robust approach such as Bayesian Optimisation (BO) which 
+is an informed search on the hyperparameter space that requires
+less iterations and computation time than random search or grid search.
+Bayesian Optimisation also allows the search space to be less constrained and biased by
+arbitrarily selected priors.
+
+Most papers (source) report the results as either the best result or the average across
+multiple runs with a standard deviation. These two summary statisticss are
+not as informative as plots on the different distributions of models.
+Other plots such as Q-Q plots or candlesticks would also be more informative, since
+the best model is typically what we are interested in producing, but the maximum of a sample of models is a statistically meaningless number which cannot be compared to other distributions.
+One set of models might on average be worse, but for instance still have
+a high volume of samples that can significantly outperform the other set.
+
+Documenting how the model is trained is important, but often the weights are not
+published alongside the paper which makes it impossible to reproduce the exact 
+test results, an author might have published the results of an exceedingly
+rare model that yields SOTA results in which the results are not reproducible by
+other researchers.
+
+Algortihmic replicability is also a concern, papers might propose some mathematically
+elegant solution to a problem, but the implementation itself is either not 
+reproducible, giving the wrong results, or a naive approach is intractible.
+It is therefore important to document the algortihmic optimisations that were
+used to arrive at the results, be it caching, algebraic simplifcations, or
+other tricks. (source SRDF and jost / liu saying that they cant compute SDRF)
+
+Various levels of reproducibility issues:
+algortihmic replicability: algortihm either is not proven to be
+correct or motivated to be correct, the implementation is not
+avaialble, reproducible or intractible.
+learning replicability: the method used to train the model is not reproducible.
+data replicability: data is not accesible or not possible to reproduce.
+methodology replicability
+
 
 
 \printbibliography
