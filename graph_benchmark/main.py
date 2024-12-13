@@ -10,6 +10,9 @@ from torch import nn
 from new_fully_adjacent import GlobalSAGEConv
 import csv
 from pathlib import Path
+from bayes_opt import BayesianOptimization
+from safetensors import safe_open
+from safetensors.torch import save_file
 
 
 class GCN(nn.Module):
@@ -70,6 +73,15 @@ def test(model, data):
     return test_acc
 
 
+def val(model, data):
+    model.eval()
+    out = model(data)
+    pred = out.argmax(dim=1)
+    val_correct = pred[data.val_mask] == data.y[data.val_mask]
+    val_acc = int(val_correct.sum()) / int(data.val_mask.sum())
+    return val_acc
+
+
 def add_run_to_csv(
     dataset_name, use_fully_adj, num_hidden_layers, learning_rate, score, time_taken
 ):
@@ -105,91 +117,78 @@ def add_run_to_csv(
 
 
 import time
-import random
 
 
-def sweep_all():
-    param_tuples = []
-    for dataset_name in ["Cora", "CiteSeer", "PubMed"]:
-        for use_fully_adj in [True, False]:
-            for num_hidden_layers in [1, 2, 3]:
-                for learning_rate in [0.001, 0.002, 0.005, 0.001]:
-                    for i in range(15):
-                        param_tuples.append(
-                            (
-                                dataset_name,
-                                use_fully_adj,
-                                num_hidden_layers,
-                                learning_rate,
-                            )
-                        )
-
-    # randomise
-    random.shuffle(param_tuples)
-
-    j = 0
-    start = time.time()
-    for param_tuple in param_tuples:
-        sweep(*param_tuple)
-        j += 1
-        # compute eta till finished
-        eta = (time.time() - start) / (j + 1) * (1080 - j) / 60
-        print(f"{j} of 1080 done, eta: {eta:.2f} minutes")
+def evaluate_model(model, optimizer, data, epochs, num_runs=15):
+    runs = []
+    for _ in range(num_runs):
+        start = time.time()
+        for epoch in range(epochs):
+            train(model, data, optimizer)
+        end = time.time()
+        test_acc = test(model, data)
+        runs.append((test_acc, end - start, model.state_dict()))
 
 
-def sweep(dataset_name, use_fully_adj, num_hidden_layers, learning_rate):
-    print(
-        f"Sweeping {dataset_name} with FA:{use_fully_adj} and {num_hidden_layers} hidden layers and learning rate {learning_rate}"
-    )
+def sweep():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load dataset (Cora by default)
-    dataset = CitationDataset(dataset_name)
+    dataset = CitationDataset("Cora")
 
     data = dataset.get_data().to(device)
 
-    # Initialize model
-    model = GCN(
-        input_dim=dataset.num_features,
-        hidden_dim=128,
-        output_dim=dataset.num_classes,
-        num_hidden_layers=num_hidden_layers,
-        use_fully_adj=use_fully_adj,
-    ).to(device)
+    pbounds = {
+        "log_epochs": (2, 4),
+        "log_learning_rate": (-3, -0.5),
+        "log_C": (-4, 0),
+    }
 
+    def base_model(num_hidden_layers):
+        model = GCN(
+            input_dim=dataset.num_features,
+            hidden_dim=16,
+            output_dim=dataset.num_classes,
+            num_hidden_layers=round(num_hidden_layers),
+            use_fully_adj=False,
+        )
+        return model
+
+    def objective(log_epochs, log_learning_rate, log_C):
+        model = base_model(1)
+
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=10**log_learning_rate, weight_decay=10**log_C
+        )
+        for _ in range(round(10**log_epochs)):
+            train(model, data, optimizer)
+        val_acc = val(model, data)
+
+        return val_acc
+
+    bo = BayesianOptimization(
+        f=objective,
+        pbounds=pbounds,
+        random_state=42,
+        verbose=2,
+    )
+    bo.maximize(
+        init_points=5,
+        n_iter=10,
+    )
+
+    print(bo.max)
+    max_params = bo.max["params"]
+
+    model = base_model(1)
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, weight_decay=5e-4
+        model.parameters(),
+        lr=10 ** max_params["log_learning_rate"],
+        weight_decay=10 ** max_params["log_C"],
     )
 
-    best_acc = 0
-    epochs_no_improvement = 0
-    # Training loop
-    start_time = time.time()
-    for epoch in range(2000):
-        loss = train(model, data, optimizer)
-        test_acc = test(model, data)
-        if test_acc > best_acc:
-            best_acc = test_acc
-            epochs_no_improvement = 0
-            # print(f"Epoch: {epoch:04d}, Loss: {loss:.4f}, Test Acc: {test_acc:.4f}")
-        else:
-            epochs_no_improvement += 1
-        if epochs_no_improvement == 300:
-            break
-
-    time_taken = time.time() - start_time
-    print(
-        f"Test Acc: {best_acc:.4f}, Params: {dataset_name}, {use_fully_adj}, {num_hidden_layers}, {learning_rate}"
-    )
-    add_run_to_csv(
-        dataset_name,
-        use_fully_adj,
-        num_hidden_layers,
-        learning_rate,
-        best_acc,
-        time_taken,
-    )
+    print(evaluate_model(model, optimizer, data, 10))
 
 
 if __name__ == "__main__":
-    sweep_all()
+    sweep()
