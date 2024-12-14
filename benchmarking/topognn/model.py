@@ -2,6 +2,7 @@ from typing import List
 from torch import nn
 import torch
 from torch_geometric.data import Data
+from torch_geometric.nn import aggr
 from tqdm import tqdm
 import time
 
@@ -29,6 +30,37 @@ class PersistentHomologyFiltrationUnionFind:
         
         return root1, root2, self.parent[root1]
 
+class PersistenceDiagram:
+    def __init__(self, n_nodes: int):
+        self.component_lifetimes = torch.stack((torch.arange(n_nodes), torch.zeros(n_nodes)), dim=1)  # key: root node, value: (birth, death)
+        self.current_components = {}  # key: node, value: root node
+        self.step_counter = 0  # Track the current step in the filtration
+
+
+    def merge_components(self, node1: torch.Tensor, node2: torch.Tensor, indices: torch.Tensor, union_find: PersistentHomologyFiltrationUnionFind):
+        """
+        Merge two components. The component of node2 is absorbed into node1's component.
+        """
+
+        # Update the Union-Find structure
+        root1, root2, new_root = union_find.union(node1, node2)
+
+        if root1 == root2:
+            return
+
+        # Determine which component survives
+        absorbed_root = root1 if new_root == root2 else root2
+
+        # Update death time for the absorbed component
+        self.component_lifetimes[torch.where(indices == absorbed_root)[0], 1] = self.step_counter
+
+
+    def finalize(self):
+        """
+        Finalize the persistence diagram by marking all remaining components with death at infinity.
+        """
+        self.component_lifetimes[self.component_lifetimes[:,1] == 0, 1] = float("inf")
+
 
 class TOGL(nn.Module):
     """
@@ -50,21 +82,16 @@ class TOGL(nn.Module):
         self.n_filtrations = n_filtrations
 
         # Neural network to compute filtration values
-        self.filtrations = nn.Sequential(
-            nn.Linear(n_features, hidden_dim),
+        self.filtrations_nn = nn.Sequential(
+            nn.Linear(n_features, 32),
             nn.ReLU(),
-            nn.Linear(hidden_dim, n_filtrations),
+            nn.Linear(32, n_filtrations),
         )
+        
+        theta_nn = nn.Linear(2, 10)
+        rho_nn = nn.Linear(10,2)
+        self.deepSetLayer = aggr.DeepSetsAggregation(theta_nn, rho_nn)
 
-    def filter_graph(self, X: torch.Tensor) -> torch.Tensor:
-        """
-        Filters the node features.
-        Args:
-            X: torch.tensor of shape (n_nodes, n_features)
-        Returns:
-            torch.tensor of shape (n_nodes, n_filtrations)
-        """
-        return self.filtrations(X)
 
     def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> List[torch.Tensor]:
         """
@@ -108,34 +135,10 @@ class TOGL(nn.Module):
 
         return persistence_diagrams
 
+    def forward(self, X):
+        filtrations = self.filtrations_nn(X)
+        
+        persitance_diagrams = self.generate_persistence_diagram_dim0(filtrations)
 
-class PersistenceDiagram:
-    def __init__(self, n_nodes: int):
-        self.component_lifetimes = torch.stack((torch.arange(n_nodes), torch.zeros(n_nodes)), dim=1)  # key: root node, value: (birth, death)
-        self.current_components = {}  # key: node, value: root node
-        self.step_counter = 0  # Track the current step in the filtration
-
-
-    def merge_components(self, node1: torch.Tensor, node2: torch.Tensor, indices: torch.Tensor, union_find: PersistentHomologyFiltrationUnionFind):
-        """
-        Merge two components. The component of node2 is absorbed into node1's component.
-        """
-
-        # Update the Union-Find structure
-        root1, root2, new_root = union_find.union(node1, node2)
-
-        if root1 == root2:
-            return
-
-        # Determine which component survives
-        absorbed_root = root1 if new_root == root2 else root2
-
-        # Update death time for the absorbed component
-        self.component_lifetimes[torch.where(indices == absorbed_root)[0], 1] = self.step_counter
-
-
-    def finalize(self):
-        """
-        Finalize the persistence diagram by marking all remaining components with death at infinity.
-        """
-        self.component_lifetimes[self.component_lifetimes[:,1] == 0, 1] = float("inf")
+        for 
+        X_hat = self.deepSetLayer(persitance_diagrams)
