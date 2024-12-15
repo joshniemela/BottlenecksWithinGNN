@@ -1,4 +1,4 @@
-from model import TOGL
+from model import TOGL, GCNWithTOGL
 
 import torch
 from torch_geometric.datasets import Planetoid
@@ -12,14 +12,28 @@ edge_list = torch.tensor(
     ]
 )
 
-togl = TOGL(2, 2, 2, 2, "sum")
+togl = TOGL(2, 2, 6, "sum")
 
-print(togl.generate_persistence_diagram_dim0(x, edge_list))
+print(togl(x, edge_list))
+print(togl(x, edge_list))
 
 dataset = Planetoid(root='/tmp/PubMed', name='PubMed')
 data = dataset[0]
 
 print(data)
 
-togl = TOGL(500, 2, 2, 2, "sum")
-print(togl.generate_persistence_diagram_dim0(data.x, data.edge_index))
+# togl = TOGL(500, 2, 2, 2, "sum")
+# print(togl(data.x, data.edge_index))
+# print(togl(data.x, data.edge_index))
+
+
+
+input_dim = 500 # Number of input features per node
+hidden_dim = 32  # Hidden layer dimension
+output_dim = 3  # Number of output classes
+n_layers = 3     # Number of GCN layers
+n_filtrations = 2  # Number of filtrations in TOGL
+model = GCNWithTOGL(input_dim, hidden_dim, output_dim, n_layers, n_filtrations)
+
+model(data)
+model(data)

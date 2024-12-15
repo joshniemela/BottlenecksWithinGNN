@@ -1,8 +1,10 @@
+import hashlib
 from typing import List
 from torch import nn
 import torch
 from torch_geometric.data import Data
 from torch_geometric.nn import aggr
+from torch_geometric.nn import GCNConv
 from tqdm import tqdm
 import time
 
@@ -75,11 +77,11 @@ class TOGL(nn.Module):
         n_features: int,
         n_filtrations: int,
         hidden_dim: int,
-        out_dim: int,
         aggregation_fn,
     ):
         super().__init__()
         self.n_filtrations = n_filtrations
+        self.hidden_dim = hidden_dim
 
         # Neural network to compute filtration values
         self.filtrations_nn = nn.Sequential(
@@ -88,10 +90,11 @@ class TOGL(nn.Module):
             nn.Linear(32, n_filtrations),
         )
         
-        theta_nn = nn.Linear(2, 10)
-        rho_nn = nn.Linear(10,2)
+        theta_nn = nn.Linear(2*n_filtrations, hidden_dim)
+        rho_nn = nn.Linear(1,n_features)
         self.deepSetLayer = aggr.DeepSetsAggregation(theta_nn, rho_nn)
 
+        self.cache = {}
 
     def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> List[torch.Tensor]:
         """
@@ -105,7 +108,7 @@ class TOGL(nn.Module):
             List of tensors, each representing the persistence diagram for one filtration.
         """
         n_nodes = X.shape[0]
-        persistence_diagrams = []
+        persistence_diagrams = torch.zeros(X.shape[1], X.shape[0], 2)
 
         for i in range(self.n_filtrations):
             _, indices = torch.sort(X[:, i])  # Sort nodes by filtration value for current filtration
@@ -129,16 +132,70 @@ class TOGL(nn.Module):
 
             pbar.close()
 
-            # Finalize the persistence diagram and convert component lifetimes to tensor
+            # Finalize the persistence diagram
             pd.finalize()
-            persistence_diagrams.append(pd.component_lifetimes.clone())
+            persistence_diagrams[i, indices, :] = pd.component_lifetimes
 
-        return persistence_diagrams
+        return persistence_diagrams.permute(1, 0, 2).reshape(n_nodes, 2*self.n_filtrations)
+    
+    def compute_hash(self, edge_list):
+        # Hash the weights of the filtration neural network
+        weights = b''.join(p.data.cpu().numpy().tobytes() for p in self.filtrations_nn.parameters())
+        edge_list_bytes = edge_list.cpu().numpy().tobytes()
+        combined = weights + edge_list_bytes
+        return hashlib.sha256(combined).hexdigest()
 
-    def forward(self, X):
-        filtrations = self.filtrations_nn(X)
-        
-        persitance_diagrams = self.generate_persistence_diagram_dim0(filtrations)
+    def forward(self, X, edge_list):
 
-        for 
-        X_hat = self.deepSetLayer(persitance_diagrams)
+        # Compute hash key for caching
+        cache_key = self.compute_hash(edge_list)
+
+        # Check cache
+        if cache_key not in self.cache:
+            # Generate persistence diagrams if not cached
+            filtrations = self.filtrations_nn(X)
+            persitance_diagrams = self.generate_persistence_diagram_dim0(filtrations, edge_list)
+            x_hat =  self.deepSetLayer.forward(persitance_diagrams, torch.zeros(self.hidden_dim, dtype=int), dim=1)
+            self.cache[cache_key] = x_hat 
+
+        return X +  self.cache[cache_key]
+
+
+class GCNWithTOGL(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, n_layers, n_filtrations):
+        super(GCNWithTOGL, self).__init__()
+        self.n_layers = n_layers
+
+        # Define GCN layers
+        self.gcn_layers = nn.ModuleList()
+        for i in range(n_layers):
+            if i == 0:
+                self.gcn_layers.append(GCNConv(input_dim, hidden_dim))
+            else:
+                self.gcn_layers.append(GCNConv(hidden_dim, hidden_dim))
+
+        # TOGL layer
+        self.togl = TOGL(
+            n_features=hidden_dim,
+            n_filtrations=n_filtrations,
+            hidden_dim=hidden_dim,
+            aggregation_fn=aggr.MeanAggregation(),  # Aggregation function
+        )
+
+        # Final output layer
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+
+        # Pass through GCN layers
+        for i in range(self.n_layers):
+            x = self.gcn_layers[i](x, edge_index)
+            x = torch.relu(x)
+
+        x = self.togl(x, edge_index)
+
+        # Final output layer
+        x = self.output_layer(x)
+
+        return x
