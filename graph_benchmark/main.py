@@ -6,7 +6,7 @@ from dataset import CitationDataset
 from torch_geometric.data import Data
 from torch_geometric.nn.aggr import SoftmaxAggregation, SetTransformerAggregation
 from torch import nn
-from new_fully_adjacent import GlobalSAGEConv
+from fully_adjacent import GlobalSAGEConv
 import csv
 from pathlib import Path
 from bayes_opt import BayesianOptimization
