@@ -1,55 +1,83 @@
 import torch
 from torch_geometric.data import Data
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import degree
+from torch.nn import Linear, Parameter
+from torch import Tensor
+from torch_geometric.typing import Adj, OptPairTensor, OptTensor, Size
+from typing import Final, Tuple, Union
+from torch_geometric.nn.pool import global_mean_pool
+from torch import tanh, relu
+from torch import nn
 
 
-def find_neighbours(edge_index: torch.Tensor, idx: int) -> torch.Tensor:
-    """Finds the neighbours of a node in an edge index"""
-    return edge_index[1, edge_index[0] == idx]
+class NonLinearWeighter(nn.Module):
+    def __init__(self, in_channels, hidden_dim, out_channels, bias=True):
+        super(NonLinearWeighter, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(in_channels, hidden_dim, bias=bias),
+            nn.Tanh(),  # Nonlinear activation
+            nn.Linear(hidden_dim, out_channels, bias=bias),
+        )
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for module in self.model:
+            if hasattr(module, "reset_parameters"):
+                module.reset_parameters()
+
+    def forward(self, x):
+        return self.model(x)
 
 
-def fully_connect(data: Data) -> Data:
-    assert data.edge_index is not None
-    assert data.num_nodes is not None
+class GlobalSAGEConv(MessagePassing):
+    def __init__(self, in_channels, out_channels, bias=True):
+        super().__init__(aggr="add")
 
-    # An index of what connected component a node belongs to
-    connected_components = torch.zeros(data.num_nodes, dtype=torch.int)
-    connected_components.fill_(-1)  # -1 is not-visited
+        self.in_channels = in_channels
+        self.out_channels = out_channels
 
-    # Initialise with no components
-    component_id = -1  # This gets incremented to 0 on the first iteration
-    stack = []
+        self.neighbour_lin = Linear(in_channels, out_channels, bias=False)
+        self.self_lin = Linear(in_channels, out_channels, bias=bias)
 
-    # DFS begins
-    for node in range(data.num_nodes):
-        if connected_components[node] == -1:
-            # We haven't visited this node yet
-            component_id += 1
-            stack.append(node)
+        # Global node representation
+        self.global_weighter = NonLinearWeighter(
+            2 * in_channels, 512, out_channels, bias=bias
+        )
 
-        while stack:
-            stack_node = stack.pop()
-            if connected_components[stack_node] != -1:
-                continue
+        self.reset_parameters()
 
-            connected_components[stack_node] = component_id
+    def reset_parameters(self):
+        super().reset_parameters()
+        self.neighbour_lin.reset_parameters()
+        self.self_lin.reset_parameters()
+        self.global_weighter.reset_parameters()
 
-            # We all the not-yet-visited neighbours of this node to the stack
-            neighbours = find_neighbours(data.edge_index, stack_node)
-            for neighbour in neighbours:
-                if connected_components[neighbour] == -1:
-                    stack.append(neighbour)
-    # DFS ends
+    def forward(
+        self,
+        x: Union[Tensor, OptPairTensor],
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        size: Size = None,
+    ) -> Tensor:
+        # x has shape [N, in_channels]
+        # edge_index has shape [2, E]
 
-    n_components = component_id + 1
+        out = self.propagate(edge_index, x=x, size=size)
+        out = self.neighbour_lin(out)
 
-    full_edges = []
-    for component in range(n_components):
-        component_nodes = torch.where(connected_components == component)[0].int()
+        x_r = x[1]
+        if x_r is not None:
+            out += self.self_lin(x_r)
 
-        # This computes the cartesian product of a connected component
-        i, j = torch.meshgrid(component_nodes, component_nodes, indexing="ij")
-        edges = torch.stack((i.flatten(), j.flatten()), dim=0)
-        full_edges.append(edges)
+            # global_node = global_mean_pool(x, batch)
+            global_node = tanh(torch.mean(x, dim=0, keepdim=True))
 
-    data.full_edge_index = torch.cat(full_edges, dim=1).int()
-    return data
+        # Each node gets the global node added scaled by the weighter
+        global_weights = self.global_weighter(
+            torch.cat([x, global_node.expand_as(x)], dim=-1)
+        )
+
+        out = out + global_weights
+
+        return tanh(out)

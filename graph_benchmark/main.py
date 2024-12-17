@@ -4,10 +4,9 @@ from torch_geometric.nn import GCNConv, MessagePassing
 from torch_geometric.transforms import NormalizeFeatures, Compose
 from dataset import CitationDataset
 from torch_geometric.data import Data
-from fully_adjacent import fully_connect
 from torch_geometric.nn.aggr import SoftmaxAggregation, SetTransformerAggregation
 from torch import nn
-from new_fully_adjacent import GlobalSAGEConv
+from fully_adjacent import GlobalSAGEConv
 import csv
 from pathlib import Path
 from bayes_opt import BayesianOptimization
