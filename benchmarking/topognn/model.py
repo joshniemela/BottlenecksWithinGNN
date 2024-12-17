@@ -8,6 +8,7 @@ from torch_geometric.nn import GCNConv
 from tqdm import tqdm
 import time
 
+
 class PersistentHomologyFiltrationUnionFind:
     def __init__(self, size: int, indices: torch.Tensor) -> None:
         self.parent = torch.arange(size)  # Initialize the Union-Find parent array
@@ -23,23 +24,31 @@ class PersistentHomologyFiltrationUnionFind:
         root1 = self.find(node1).clone()
         root2 = self.find(node2).clone()
 
-        if (root1 != root2):
+        if root1 != root2:
             # Union by rank, but rank is based on the sorted indices
-            if (self.rank[root1] < self.rank[root2]):
+            if self.rank[root1] < self.rank[root2]:
                 self.parent[root2] = root1
             else:  # there is no need to check for equality, since the indices are unique
                 self.parent[root1] = root2
-        
+
         return root1, root2, self.parent[root1]
+
 
 class PersistenceDiagram:
     def __init__(self, n_nodes: int):
-        self.component_lifetimes = torch.stack((torch.arange(n_nodes), torch.zeros(n_nodes)), dim=1)  # key: root node, value: (birth, death)
+        self.component_lifetimes = torch.stack(
+            (torch.arange(n_nodes), torch.zeros(n_nodes)), dim=1
+        )  # key: root node, value: (birth, death)
         self.current_components = {}  # key: node, value: root node
         self.step_counter = 0  # Track the current step in the filtration
 
-
-    def merge_components(self, node1: torch.Tensor, node2: torch.Tensor, indices: torch.Tensor, union_find: PersistentHomologyFiltrationUnionFind):
+    def merge_components(
+        self,
+        node1: torch.Tensor,
+        node2: torch.Tensor,
+        indices: torch.Tensor,
+        union_find: PersistentHomologyFiltrationUnionFind,
+    ):
         """
         Merge two components. The component of node2 is absorbed into node1's component.
         """
@@ -54,14 +63,15 @@ class PersistenceDiagram:
         absorbed_root = root1 if new_root == root2 else root2
 
         # Update death time for the absorbed component
-        self.component_lifetimes[torch.where(indices == absorbed_root)[0], 1] = self.step_counter
+        self.component_lifetimes[torch.where(indices == absorbed_root)[0], 1] = (
+            self.step_counter
+        )
 
-
-    def finalize(self):
+    def insert_inf(self):
         """
         Finalize the persistence diagram by marking all remaining components with death at infinity.
         """
-        self.component_lifetimes[self.component_lifetimes[:,1] == 0, 1] = float("inf")
+        self.component_lifetimes[self.component_lifetimes[:, 1] == 0, 1] = float("inf")
 
 
 class TOGL(nn.Module):
@@ -89,14 +99,16 @@ class TOGL(nn.Module):
             nn.ReLU(),
             nn.Linear(32, n_filtrations),
         )
-        
-        theta_nn = nn.Linear(2*n_filtrations, hidden_dim)
-        rho_nn = nn.Linear(1,n_features)
+
+        theta_nn = nn.Linear(2 * n_filtrations, hidden_dim)
+        rho_nn = nn.Linear(1, n_features)
         self.deepSetLayer = aggr.DeepSetsAggregation(theta_nn, rho_nn)
 
         self.cache = {}
 
-    def generate_persistence_diagram_dim0(self, X: torch.Tensor, edge_list: torch.Tensor) -> List[torch.Tensor]:
+    def generate_persistence_diagram_dim0(
+        self, X: torch.Tensor, edge_list: torch.Tensor
+    ) -> List[torch.Tensor]:
         """
         Generates 0-dimensional persistence diagrams using the updated PersistenceDiagram class.
 
@@ -111,8 +123,12 @@ class TOGL(nn.Module):
         persistence_diagrams = torch.zeros(X.shape[1], X.shape[0], 2)
 
         for i in range(self.n_filtrations):
-            _, indices = torch.sort(X[:, i])  # Sort nodes by filtration value for current filtration
-            uf = PersistentHomologyFiltrationUnionFind(n_nodes, indices)  # Initialize Union-Find for connected components
+            _, indices = torch.sort(
+                X[:, i]
+            )  # Sort nodes by filtration value for current filtration
+            uf = PersistentHomologyFiltrationUnionFind(
+                n_nodes, indices
+            )  # Initialize Union-Find for connected components
             pd = PersistenceDiagram(n_nodes)  # Initialize the persistence diagram
 
             active_nodes = torch.zeros(n_nodes, dtype=torch.bool, device=X.device)
@@ -122,9 +138,13 @@ class TOGL(nn.Module):
                 active_nodes[vertex] = True
                 pd.step_counter = step
 
-                neighbors = edge_list[1][edge_list[0] == vertex] # Get neighbors of the current node
-                active_neighbors = neighbors[active_nodes[neighbors]] # Filter out nodes not yet added to the filtration
-                
+                neighbors = edge_list[1][
+                    edge_list[0] == vertex
+                ]  # Get neighbors of the current node
+                active_neighbors = neighbors[
+                    active_nodes[neighbors]
+                ]  # Filter out nodes not yet added to the filtration
+
                 for neighbor in active_neighbors:
                     pd.merge_components(vertex, neighbor, indices, uf)
 
@@ -136,11 +156,15 @@ class TOGL(nn.Module):
             pd.finalize()
             persistence_diagrams[i, indices, :] = pd.component_lifetimes
 
-        return persistence_diagrams.permute(1, 0, 2).reshape(n_nodes, 2*self.n_filtrations)
-    
+        return persistence_diagrams.permute(1, 0, 2).reshape(
+            n_nodes, 2 * self.n_filtrations
+        )
+
     def compute_hash(self, edge_list):
         # Hash the weights of the filtration neural network
-        weights = b''.join(p.data.cpu().numpy().tobytes() for p in self.filtrations_nn.parameters())
+        weights = b"".join(
+            p.data.cpu().numpy().tobytes() for p in self.filtrations_nn.parameters()
+        )
         edge_list_bytes = edge_list.cpu().numpy().tobytes()
         combined = weights + edge_list_bytes
         return hashlib.sha256(combined).hexdigest()
@@ -154,11 +178,15 @@ class TOGL(nn.Module):
         if cache_key not in self.cache:
             # Generate persistence diagrams if not cached
             filtrations = self.filtrations_nn(X)
-            persitance_diagrams = self.generate_persistence_diagram_dim0(filtrations, edge_list)
-            x_hat =  self.deepSetLayer.forward(persitance_diagrams, torch.zeros(self.hidden_dim, dtype=int), dim=1)
-            self.cache[cache_key] = x_hat 
+            persitance_diagrams = self.generate_persistence_diagram_dim0(
+                filtrations, edge_list
+            )
+            x_hat = self.deepSetLayer.forward(
+                persitance_diagrams, torch.zeros(self.hidden_dim, dtype=int), dim=1
+            )
+            self.cache[cache_key] = x_hat
 
-        return X +  self.cache[cache_key]
+        return X + self.cache[cache_key]
 
 
 class GCNWithTOGL(nn.Module):
