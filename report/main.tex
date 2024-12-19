@@ -163,11 +163,30 @@ Next, we tried a classification problem, which also turned out to be slightly mo
 
 We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classes, we can conclude that the model has not managed to learn the objective function.
 
-The motivation of our following experiments is that we want the aggregator to find the difference between the children nodes and the root node. Hence we want to add the neighbours to the root but subtract the root node itself. Hence the self loop needs a separate weight parameter.
+In fact, we argue that this issue is not merely a matter of data or convergence but represents a fundamental limitation of the model. To determine whether \(x_1 = x_2 + x_3\), the model must be able to process interactions between the messages (e.g., by subtracting \(x_2 + x_3\) from \(x_1\)). However, since our GNN computes \(z = w (x_1 + x_2 + x_3) + b\) as the node representation of \(x_1\), it lacks the capacity to explicitly represent the subtraction or compare \(x_1\) against \(x_2 + x_3\). The shared weights ensure that each message contributes uniformly, pushing the node representation tensor in the same direction and thereby precluding the necessary relational reasoning.
 
-Hence we tried using a SAGE model, this is the same as the GCN model but with
-an additional weight parameter for the self-loop, we also gave it a bias parameter. We got an accuracy of 53\%. % aber why do we give it a bias parameter?
+
+We can analytically reason that giving \(x_1\) a distinct weight \(w_1\) and \(x_2 + x_3\) a distinct weight \(w_2\) and setting \(-w_1 = w_2\), the node representation of \(x_1\) will be
+
+\begin{align*} z &= w_1 x_1 + w_2 (x_2 + x_3) + b \\   &= w_1 x_1 + (-w_1)(x_2 + x_3) + b \\   &= w_1 (x_1 - (x_2 + x_3)) + b. \end{align*}
+
+When \(x_1 = x_2 + x_3\), this simplifies to
+
+\[
+z = b.
+\]
+
+More generally, we can find the difference between \(x_1\) and \(x_2 + x_3\) by:
+
+\[
+\left| z - \frac{b}{w_1} \right|.
+\]
+
+
+Hence we opted to use a SAGE model [CITATION], this is Similar to the GCN model but with an additional weight parameter for the self-loop. We also use a bias parameter. We got an accuracy of 53\%. % aber why do we give it a bias parameter?
 This is not much better than the GCN model.
+
+[FORMALLY EXPLAIN THE PROBLEM]
 
 The models fail to learn since we have no non-linearity in the model. We need some behaviour
 that allows the model to learn that the further away from 0 the difference is,
@@ -188,8 +207,6 @@ Even still we notice that our model is really unstable, most of the time, it nev
   \caption{The loss surface of the three-node graph classification problem.}
   \label{fig:loss_surface}
 \end{figure}
-
-
 
 
 \section{Tree neighbours-match}
