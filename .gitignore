@@ -9,3 +9,4 @@ data/*
 .direnv
 *.png
 datasets/*
+.idea/
