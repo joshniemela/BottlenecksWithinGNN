@@ -159,7 +159,7 @@ Next, we do the same for the normalised example, \(\hat{d}_{i}\) is the number o
 SHOW RESULTS HERE (
 Homework for Mustafa)
 
-Next, we tried a classification problem, which also turned out to be slightly more complex. We reused the same graph. But this time we want to classify if \(x_{1} = x_{2}+x_{3}\) is true or not for the given graph. \(x_2, x_3\) are integers sampled from a uniform distribution in the range \([0, 10[\). Half of the generated graphs will have the property that \(x_{1} = x_{2}+x_{3}\) and the other half \(x_1\) is a random integer in the range \([0, 20[\).
+Next, we tried a classification problem, which also turned out to be slightly more complex. We reused the same graph. But this time we want to classify if \(x_{1} = x_{2}+x_{3}\) is true or not for the given graph. \(x_2, x_3\) are integers sampled from a uniform distribution in the range \([0, 10[\). Half of the generated graphs will have the property that \(x_{1} = x_{2}+x_{3}\) and the other half \(x_1\) is a random integer in the range \([0, 20[\). We mark the target class after generation to account for the case that that \(x_1\) is the sum of \(x_2\) and \(x_3\) also in the random case. [CALCULATE THE EXACT DISTRIBUTION OF THE CLASSES]
 
 We tried with the same GCN model, here we got an accuracy of 48.5\%. Since this is close to the actual distribution of the classes, we can conclude that the model has not managed to learn the objective function.
 
@@ -217,11 +217,11 @@ The root has a random number of leaves between \(1\) and \(2^{d}\). The nodes in
 \subsection{Running the experiment} % tree neighbours-match
 
 Although in \cite{alon_bottleneck_2021}, the authors present their findings on the tree neighbours-match dataset, they do not provide results of implementing the fully adjacent last layer which they otherwise more widely propose as a heuristic approach to deal with over-squashing.
-This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in Figure \ref{fig:tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
+This has led us to implement the fully adjacent last layer and compare the model with and without the last layer. We have in total run 1135 experiments, with a random distribution of parameters, to see how the GCN models with and without the fully adjacent last layer compare. The results are presented in Figure \ref{fig:assets/tree_experiment_graph}. More detailed results can be found \href{PLACE SOMETHING HERE MAYBE A LINK TO THE RESULTS IN THE}{here}.
 
 \begin{figure}[H]
   \centering
-  \input{tree_experiment_graph.tex}
+  \input{assets/tree_experiment_graph.tex}
   \caption{The results of the tree neighbours-match experiment.}
   \label{fig:tree_experiment_graph}
 \end{figure}
