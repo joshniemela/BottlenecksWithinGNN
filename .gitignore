@@ -12,3 +12,4 @@ data/raw/qm9_v3.pt
 .direnv
 *.png
 datasets/*
+.idea/
