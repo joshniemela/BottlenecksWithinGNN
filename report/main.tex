@@ -253,9 +253,11 @@ The results of the tree neighbours-match experiment show that contrary to the fi
 
 \subsection{Fully adjacent last layer}
 We computed all the connected components of the graph, then for each connected component, we computed the cartesian product of the nodes and added all these as edges to the graph.
-This yielded bad results (source), we will change this to a better implementation after implmenting the TOGL and SDRF benchmarks.
+This yielded bad results (source) both in terms of computational efficiency and accuracy.
+We then implemented a better more efficient algortihm building on the ideas of the paper named
+"Globally Aggregating GCN".
 
-\subsection{Globally aggregating GCN}
+\subsection{Globally Aggregating GCN}
 We suspect that over-squashing is caused by the fact that long range interactions are being 
 watered out by the neighbours around the path of information flow. 
 We therefore propose adding a global node to collect all the non-local information
@@ -292,6 +294,9 @@ For most datasets we can assume the receptive field grows expoentially, and comb
 As noted by [https://arxiv.org/pdf/2212.02374], the Balanced Forman Curvature (BFC) metric is very expensive and they suggested a different
 approach (their own Jost-Liu Curvature). This approach dissapointingly yields resuls comparable to the baseline GCN.
 
+With the computational problems of this algortihm, and the fact that the simplified JLC 
+metric yields poor results, we decided to not further investigate this approach.
+
 \subsection{TOGL}
 
 Performance wise we notice that the Persistance diagram computation runs the same, when single threaded, on both a low end cpu with just 3MB og cache and a midrange cpu core with 16MB cache. This confirms our suspicion that the random ordering of nodes in the filtration process, is maximally not spacially local. This is because of the uniform sampling of the nodes across the datastructure which stores the graph. Although the filtration could in principle be computed with high effeciency, in practice, the computation is done from the very slow system RAM and only sequencially, since the algorithm requires information from the previous step to compute the next step. This makes it inherently disadvantagous to algorithm with high spacial locality and algorithms relying on vectorizable operations.
@@ -315,7 +320,48 @@ this is analogous to deploying untested prototypes in production environments.
 
 Machine learning methodology prioritises acquiring a good model, but not reproducible models or behaviour. (professional vs academic)
 
-\subsection{Dependency hell}
+
+A lot of papers prioritise the mathematics of the models and theory but often brush over the implementation details.
+These implementation details are essential to the reproducibility of the experiments and the results.
+Without these details, it's often only possible to reproduce the results using the exact same code and hardware that the authors used. 
+This leads to the problem of dependency hell where the code is not portable and the results are not reproducible.
+This problem is partly due to the majority of papers within the field of machine learning using Python.
+
+CITE SDRF. In this paper, they propose a new algorihtm for graph representation learning, 
+but the naive approach (if you just directly convert the maths to code) is intractible and 
+it is not feasible to train a model with this approach.
+The authors provide their own code in the form of a github repository.
+This code might work, but we failed to get the dependencies to resolve and have the code run.
+Their specific implementation uses some efficient linear algebra tricks that are not
+documented in the code nor the paper, which means its not immediately apparent
+that this code even is correct according to the mathematical motivation in the paper.
+
+A lot of code has the characteristics of being swiftly prototyped code, with 
+little to no documentation, no tests and no focus on portability.
+Often the code is also not modular which makes it hard to reuse the code in other 
+reproductions or experiments, and you end up having to rewrite the code from scratch.
+
+A way to mitigate these problems, is to better document implemetation details that
+deviate from the mathematics, and to provide model weights, and datasets. 
+If you have the capacity to train on dozens of GPUs then you can also provide
+the datasets and model weights in a portable and reproducible format.
+
+\subsection{Dependency hell and reproducibiity woes in Python}
+Python has notoriously bad package management, and the common workflow is to use virtual environments which may persist state across sessions or experiments. To make matters worse, there are multiple
+standards for virtual environments, all of which are not compatible with each other.
+The common workflow is also to use notebooks which are not very friendly to version control, which
+makes it difficult to compare different versions of the same experiment.
+For package management you can use things like Pip, Poetry, Pipenv, Conda, uv and more. Most of these solutions are not compatible with each other. 
+Some packages also cause trouble with reproducibility, for instance Numpy or other packages that depend on C++ bindings. 
+Lastly another problem with Python's ecosystem is that packages quickly become abanadoned and break
+due to external factors without any changes having been done to the package itself.
+These bindings are often not explicit dependencies and might break on containerised systems or non-standard operating systems such as NixOS or systems without preinstalled C++ libraries.
+
+A concrete example could be that the paper [CITE ALON AND YAHAV] which both use an old
+version of numpy (there has since been made breaking changes to Numpy), TensorFlow, and PyTorch all
+in the same experiment. There are also very few comments in the repository.
+Without the high level implementation details, it is quite difficult to reproduce the results.
+
 Outdated dependencies / breaking changes
 Dead dependencies / Missing dependencies
 No documentation or poor documentation
