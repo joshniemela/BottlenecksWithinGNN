@@ -6,8 +6,8 @@ from models import NonLinearSAGE
 from torch_geometric.loader import DataLoader
 import matplotlib
 
-matplotlib.use("Qt5Agg")
-# matplotlib.use('pgf')
+# matplotlib.use("Qt5Agg")
+matplotlib.use("pgf")
 
 
 def print_model_parameters(model):
@@ -56,7 +56,8 @@ ax.set_zlabel("Loss")
 ax.set_title("3D Loss Surface")
 
 # high resolution plot
-plt.savefig("loss_3d.png", dpi=900)
+plt.savefig("three_neighbour_classifier_gaussian_activatoin.pgf", dpi=900)
+# plt.savefig("three_neighbour_classifier_gaussian_activatoin.png", dpi=900)
 
 plt.ion()
 plt.show(block=True)
