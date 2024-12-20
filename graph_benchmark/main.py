@@ -3,7 +3,6 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, MessagePassing
 from torch_geometric.transforms import NormalizeFeatures, Compose
 from dataset import CitationDataset
-from torch_geometric.data import Data
 from fully_adjacent import fully_connect
 from torch_geometric.nn.aggr import SoftmaxAggregation, SetTransformerAggregation
 from torch import nn
@@ -12,7 +11,9 @@ import csv
 from pathlib import Path
 from bayes_opt import BayesianOptimization
 from safetensors import safe_open
-from safetensors.torch import save_file
+from safetensors.torch import save_model
+import time
+import uuid
 
 
 class GCN(nn.Module):
@@ -82,80 +83,63 @@ def val(model, data):
     return val_acc
 
 
-def add_run_to_csv(
-    dataset_name, use_fully_adj, num_hidden_layers, learning_rate, score, time_taken
-):
-    csv_file_path = f"results/{dataset_name}.csv"
-    csv_file = Path(csv_file_path)
-
-    if not csv_file.exists():
-        with open(csv_file, "w") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(
-                [
-                    "Dataset",
-                    "Use Fully Adj",
-                    "Num Hidden Layers",
-                    "Learning Rate",
-                    "Score",
-                    "Time Taken",
-                ]
-            )
-
-    with open(csv_file, "a") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(
-            [
-                dataset_name,
-                use_fully_adj,
-                num_hidden_layers,
-                learning_rate,
-                score,
-                time_taken,
-            ]
-        )
+def base_model(dataset, num_hidden_layers, use_fully_adj):
+    model = GCN(
+        input_dim=dataset.num_features,
+        hidden_dim=128,
+        output_dim=dataset.num_classes,
+        num_hidden_layers=num_hidden_layers,
+        use_fully_adj=use_fully_adj,
+    )
+    return model
 
 
-import time
+def evaluate_model(num_hidden_layers, use_fully_adj, max_params, dataset, num_runs=15):
+    epochs = round(10 ** max_params["log_epochs"])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    data = dataset.get_data().to(device)
 
-
-def evaluate_model(model, optimizer, data, epochs, num_runs=15):
     runs = []
     for _ in range(num_runs):
+        model = base_model(dataset, num_hidden_layers, use_fully_adj).to(device)
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=10 ** max_params["log_learning_rate"],
+            weight_decay=10 ** max_params["log_C"],
+        )
+
+        print("Starting run")
         start = time.time()
-        for epoch in range(epochs):
+        for _ in range(epochs):
             train(model, data, optimizer)
         end = time.time()
         test_acc = test(model, data)
-        runs.append((test_acc, end - start, model.state_dict()))
+        runs.append(
+            {
+                "test_acc": test_acc,
+                "time_taken": end - start,
+                "model": model,
+            }
+        )
+        print(f"Test accuracy: {test_acc:.4f}, time: {end - start:.2f}s")
+    return runs
 
 
-def sweep():
+def bayesian_sweep(num_hidden_layers, dataset_name, use_fully_adj, num_runs):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load dataset (Cora by default)
-    dataset = CitationDataset("Cora")
+    dataset = CitationDataset(dataset_name)
 
     data = dataset.get_data().to(device)
 
     pbounds = {
-        "log_epochs": (2, 4),
-        "log_learning_rate": (-3, -0.5),
-        "log_C": (-4, 0),
+        "log_epochs": (2, 3.5),
+        "log_learning_rate": (-4, -1),
+        "log_C": (-4, -2),
     }
 
-    def base_model(num_hidden_layers):
-        model = GCN(
-            input_dim=dataset.num_features,
-            hidden_dim=16,
-            output_dim=dataset.num_classes,
-            num_hidden_layers=round(num_hidden_layers),
-            use_fully_adj=False,
-        )
-        return model
-
     def objective(log_epochs, log_learning_rate, log_C):
-        model = base_model(1)
+        model = base_model(dataset, num_hidden_layers, use_fully_adj).to(device)
 
         optimizer = torch.optim.Adam(
             model.parameters(), lr=10**log_learning_rate, weight_decay=10**log_C
@@ -164,7 +148,8 @@ def sweep():
             train(model, data, optimizer)
         val_acc = val(model, data)
 
-        return val_acc
+        epoch_loss = 4e-7 * 10**log_epochs
+        return val_acc - epoch_loss
 
     bo = BayesianOptimization(
         f=objective,
@@ -174,21 +159,73 @@ def sweep():
     )
     bo.maximize(
         init_points=5,
-        n_iter=10,
+        n_iter=15,
     )
 
-    print(bo.max)
     max_params = bo.max["params"]
 
-    model = base_model(1)
-    optimizer = torch.optim.Adam(
-        model.parameters(),
-        lr=10 ** max_params["log_learning_rate"],
-        weight_decay=10 ** max_params["log_C"],
+    runs_data = evaluate_model(
+        num_hidden_layers,
+        use_fully_adj,
+        max_params,
+        dataset,
+        num_runs,
     )
+    for run in runs_data:
+        run["dataset_name"] = dataset_name
+        run["use_fully_adj"] = use_fully_adj
+        run["num_hidden_layers"] = num_hidden_layers
+        run["log_learning_rate"] = max_params["log_learning_rate"]
+        run["log_C"] = max_params["log_C"]
+        run["log_epochs"] = max_params["log_epochs"]
+    return runs_data
 
-    print(evaluate_model(model, optimizer, data, 10))
+
+def save_runs(runs):
+    csv_file_path = f"results/runs.csv"
+    csv_file = Path(csv_file_path)
+    if not csv_file.exists():
+        with open(csv_file_path, "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "run_id",
+                    "dataset_name",
+                    "use_fully_adj",
+                    "num_hidden_layers",
+                    "learning_rate",
+                    "epochs",
+                    "C",
+                    "score",
+                    "time_taken",
+                ]
+            )
+
+    with open(csv_file_path, "a") as f:
+        writer = csv.writer(f)
+        for run in runs:
+            run_id = str(uuid.uuid4())
+            writer.writerow(
+                [
+                    run_id,
+                    run["dataset_name"],
+                    run["use_fully_adj"],
+                    run["num_hidden_layers"],
+                    10 ** run["log_learning_rate"],
+                    round(10 ** run["log_epochs"]),
+                    10 ** run["log_C"],
+                    run["test_acc"],
+                    run["time_taken"],
+                ]
+            )
+            save_model(run["model"], f"results/{run_id}.safetensors")
 
 
 if __name__ == "__main__":
-    sweep()
+    for dataset_name in ["Cora", "CiteSeer", "PubMed"]:
+        for use_fully_adj in [False, True]:
+            for num_hidden_layers in [1, 2, 3]:
+                runs = bayesian_sweep(
+                    num_hidden_layers, dataset_name, use_fully_adj, 15
+                )
+                save_runs(runs)
