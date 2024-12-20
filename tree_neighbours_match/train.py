@@ -16,6 +16,7 @@ from torch_geometric.loader import DataLoader
 import wandb
 import yaml
 import os
+from models import GCN, GGNN, GIN, GAT
 
 
 # device = "cuda" if cuda.is_available() else "cpu"
