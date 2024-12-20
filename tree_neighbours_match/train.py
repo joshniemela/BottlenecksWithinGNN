@@ -14,6 +14,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch_geometric.loader import DataLoader
 import wandb
+from models import GCN, GGNN, GIN, GAT
 
 
 # device = "cuda" if cuda.is_available() else "cpu"
@@ -182,5 +183,4 @@ model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
 
 
 if __name__ == "__main__":
-
     train_eval_gcn_with_wandb()
