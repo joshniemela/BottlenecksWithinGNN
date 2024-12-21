@@ -1,0 +1,36 @@
+name: Build Typst document
+on:
+  push:
+    paths:
+      - ".github/workflows/typst_ci.yml"
+      - "report/**"
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_typst:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@v4
+      - name: Compile Typst document
+        uses: lvignoli/typst-action@main
+        with:
+          source_file: report/main.typ
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: report/main.pdf
+          name: Report ${{ format(github.event.repository.updated_at, 'YYYY-MM-DD') }}
+          tag_name: latest-report
+          body: Automatically generated report from latest main branch commit
+          draft: false
+          prerelease: false

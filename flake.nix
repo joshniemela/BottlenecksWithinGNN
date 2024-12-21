@@ -140,6 +140,7 @@
         clinfo
         zlib
         cmake
+        typst
       ];
       # ++ gpu_libs;
       LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
