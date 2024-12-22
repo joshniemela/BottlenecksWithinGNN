@@ -105,5 +105,4 @@ end
 
 # Generate and display the combined plot
 combined_plot = create_combined_plot()
-# save as svg
-savefig(combined_plot, "combined_plot.svg")
+savefig(combined_plot, "results/combined_plot.svg")
