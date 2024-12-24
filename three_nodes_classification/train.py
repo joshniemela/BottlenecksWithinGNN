@@ -6,7 +6,7 @@ import torch
 from torch.optim import AdamW
 
 # Set the seed for reproducibility
-torch.manual_seed(0)
+# torch.manual_seed(29)
 
 
 # Training function
@@ -31,7 +31,7 @@ def evaluate(model, data_loader):
     with torch.no_grad():
         for batch in data_loader:
             outputs = model(batch)
-            predicted = (outputs > 0.5).float()
+            predicted = (outputs.abs() > 0.5).float()
             total += batch.y.size(0)
             correct += (predicted == batch.y).sum().item()
     accuracy = 100 * correct / total
@@ -48,17 +48,16 @@ def main(
     num_epochs=100,
     num_runs=5,
 ):
-    # Generate training and test datasets
-    train_data_list = generate_three_nodes_dataset(samples)
-    test_data_list = generate_three_nodes_dataset(samples)
-    train_loader = DataLoader(train_data_list, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_data_list, batch_size=batch_size, shuffle=True)
 
     accuracies = []
 
     print(f"Training model: {model_type}, Normalise: {normalise}")
 
     for run in range(num_runs):
+        train_data_list = generate_three_nodes_dataset(samples)
+        test_data_list = generate_three_nodes_dataset(samples)
+        train_loader = DataLoader(train_data_list, batch_size=batch_size, shuffle=True)
+        test_loader = DataLoader(test_data_list, batch_size=batch_size, shuffle=True)
         # Select model type based on user input
         if model_type == "GCN":
             model = GCN(normalise=normalise)

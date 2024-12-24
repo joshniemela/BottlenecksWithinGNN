@@ -21,7 +21,7 @@ class GCN(nn.Module):
 class SAGE(nn.Module):
     def __init__(self, normalise=False):
         super(SAGE, self).__init__()
-        self.conv = SAGEConv(1, 1, normalize=normalise, bias=True, aggr="sum")
+        self.conv = SAGEConv(1, 1, normalize=normalise, bias=False, aggr="sum")
 
     def forward(self, data):
         x, edge_index, _ = data.x, data.edge_index, data.batch
@@ -39,9 +39,11 @@ class NonLinearSAGE(nn.Module):
         self.conv = SAGEConv(1, 1, normalize=normalise, bias=False, aggr="sum")
 
         if activation == "gaussian":
-            self.activation = lambda x: torch.exp(-torch.pow(x[:, 0], 2))
+            self.activation = lambda x: torch.exp(-torch.pow(x, 2))
         elif activation == "simple":
-            self.activation = lambda x: 1 - torch.pow(x[:, 0], 2)
+            self.activation = lambda x: 1 - torch.pow(x, 2)
+        elif activation == "sigmoid":
+            self.activation = torch.sigmoid
 
     def forward(self, data):
         x, edge_index, _ = data.x, data.edge_index, data.batch
@@ -50,6 +52,6 @@ class NonLinearSAGE(nn.Module):
 
         x = x.view(-1, 3)
 
-        out = self.activation(x)
+        out = self.activation(x[:, 0])
 
         return out

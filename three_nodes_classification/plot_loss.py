@@ -4,10 +4,6 @@ import matplotlib.pyplot as plt
 from dataset import generate_three_nodes_dataset
 from models import NonLinearSAGE
 from torch_geometric.loader import DataLoader
-import matplotlib
-
-matplotlib.use("Qt5Agg")
-# matplotlib.use('pgf')
 
 
 def print_model_parameters(model):
@@ -20,15 +16,19 @@ data_list = generate_three_nodes_dataset(300)
 data_loader = DataLoader(data_list, batch_size=1028, shuffle=True)
 
 # Create a grid of w1 and w2 values
-w1_range = np.linspace(-1, 1, 20)
-w2_range = np.linspace(-1, 1, 20)
+w1_range = np.linspace(-1, 1, 100)
+w2_range = np.linspace(-1, 1, 100)
 W1, W2 = np.meshgrid(w1_range, w2_range)
 
 # Initialize your model
-model = NonLinearSAGE()
+model = NonLinearSAGE(activation="gaussian")
 criterion = torch.nn.CrossEntropyLoss()
 
 Loss = np.zeros((len(w1_range), len(w2_range)))
+
+max_loss = 0
+max_loss_w_1_weight = 0
+max_loss_w_2_weight = 0
 
 # Calculate loss over the grid
 for i in range(len(w1_range)):
@@ -42,8 +42,16 @@ for i in range(len(w1_range)):
             loss = criterion(out, batch.y)
             total_loss += loss.item()
         Loss[i, j] = total_loss / len(data_loader)
-
+        if Loss[i, j] > max_loss:
+            max_loss = Loss[i, j]
+            max_loss_w_1_weight = W1[i, j]
+            max_loss_w_2_weight = W2[i, j]
     print(f"Finished {i+1}/{len(w1_range)} iterations")
+
+print(f"Max loss: {max_loss:.4f}")
+print(f"Max loss w1 weight: {max_loss_w_1_weight:.4f}")
+print(f"Max loss w2 weight: {max_loss_w_2_weight:.4f}")
+
 
 # Plot the 3D surface
 fig = plt.figure()
@@ -53,10 +61,6 @@ ax.plot_surface(W1, W2, Loss, cmap="viridis", edgecolor="none")
 ax.set_xlabel("w1")
 ax.set_ylabel("w2")
 ax.set_zlabel("Loss")
-ax.set_title("3D Loss Surface")
 
 # high resolution plot
-plt.savefig("loss_3d.png", dpi=900)
-
-plt.ion()
-plt.show(block=True)
+plt.savefig("three_neighbour_classifier_gaussian_activation.svg", dpi=900)
