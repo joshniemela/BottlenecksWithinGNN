@@ -25,8 +25,7 @@ def generate_three_nodes_dataset(n: int, device="cpu") -> list[Data]:
     # allow epsilon difference
     eps = 0.01
     y = torch.abs(node_values[:, 0] - (node_values[:, 1] + node_values[:, 2])) < eps
-    # make 2d where the second dimension is 1 if the value is true and dimension 0  is 1 if the value is false
-    y = y.to(torch.float)
+    y = y.float()
 
     # We may use the data_list directly in a DataLoader object,
     # https://pytorch-geometric.readthedocs.io/en/latest/notes/create_dataset.html

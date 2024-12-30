@@ -1,7 +1,16 @@
+
 import argparse
+import csv
+from pathlib import Path
+import time
+import uuid
+
+from bayes_opt import BayesianOptimization
+from tqdm import tqdm
 from dataset import generate_three_nodes_dataset
 from models import GCN, SAGE, NonLinearSAGE
 from torch_geometric.loader import DataLoader
+from safetensors.torch import save_model
 import torch
 from torch.optim import AdamW
 
@@ -28,10 +37,15 @@ def evaluate(model, data_loader):
     model.eval()
     correct = 0
     total = 0
+    all_ys = torch.tensor([graph.y for graph in data_loader.dataset])
+    values = torch.unique(all_ys).unsqueeze(0)
     with torch.no_grad():
         for batch in data_loader:
-            outputs = model(batch)
-            predicted = (outputs.abs() > 0.5).float()
+            outputs = model(batch).unsqueeze(1)
+            diff = torch.abs(outputs - values)
+            _, nearest = torch.min(diff, dim=1)
+            predicted = values.view(-1)[nearest]
+
             total += batch.y.size(0)
             correct += (predicted == batch.y).sum().item()
     accuracy = 100 * correct / total
@@ -40,15 +54,15 @@ def evaluate(model, data_loader):
 
 # Main function
 def main(
-    model_type="GCN",
+    model_type,
+    samples,
+    batch_size,
+    learning_rate,
+    num_epochs,
+    num_runs,
     normalise=False,
-    samples=1000,
-    batch_size=64,
-    learning_rate=0.01,
-    num_epochs=100,
-    num_runs=5,
 ):
-
+    runs = []
     accuracies = []
 
     print(f"Training model: {model_type}, Normalise: {normalise}")
@@ -71,12 +85,19 @@ def main(
             )
 
         # Define optimizer and loss function
-        optimizer = AdamW(model.parameters(), lr=learning_rate, weight_decay=5e-4)
-        criterion = torch.nn.CrossEntropyLoss()
+        optimizer = AdamW(model.parameters(), lr=learning_rate, amsgrad=True)
+        criterion = torch.nn.BCEWithLogitsLoss()
 
         # Training loop
-        for epoch in range(num_epochs):
-            loss = train(model, train_loader, optimizer, criterion)
+        start = time.time()
+        with tqdm(total=num_epochs, desc="Epochs", unit="epoch") as pbar:
+            for epoch in range(num_epochs):
+                loss = train(model, train_loader, optimizer, criterion)
+                
+                # Update the progress bar
+                pbar.set_postfix(loss=loss)
+                pbar.update(1)
+        end = time.time()
 
         # Evaluate accuracy on test set
         accuracy = evaluate(model, test_loader)
@@ -86,6 +107,12 @@ def main(
         # prinitng the model parameters
         for name, param in model.named_parameters():
             print(name, param)
+
+        runs.append({"model": model, "dataset_name": "ThreeNodesClassification", "epochs": num_epochs, "accuracy": accuracy, "time_taken": end - start})
+
+        save_runs(runs)
+
+        runs = []
 
     # Metrics computation
     mean_accuracy = sum(accuracies) / len(accuracies)
@@ -97,6 +124,38 @@ def main(
     print(f"Mean Accuracy: {mean_accuracy:.2f}%")
     print(f"Median Accuracy: {median_accuracy:.2f}%")
     print(f"Standard Deviation of Accuracy: {std_dev_accuracy:.2f}")
+
+
+def save_runs(runs):
+    csv_file_path = f"results/runs.csv"
+    csv_file = Path(csv_file_path)
+    if not csv_file.exists():
+        with open(csv_file_path, "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "run_id",
+                    "dataset_name",
+                    "epochs",
+                    "accuracy",
+                    "time_taken",
+                ]
+            )
+
+    with open(csv_file_path, "a") as f:
+        writer = csv.writer(f)
+        for run in runs:
+            run_id = str(uuid.uuid4())
+            writer.writerow(
+                [
+                    run_id,
+                    run["dataset_name"],
+                    run["epochs"],
+                    run["accuracy"],
+                    run["time_taken"],
+                ]
+            )
+            save_model(run["model"], f"results/{run_id}.safetensors")
 
 
 if __name__ == "__main__":
