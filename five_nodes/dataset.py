@@ -2,7 +2,7 @@ import torch
 from torch_geometric.data import Data
 
 
-def generate_three_nodes_dataset(n: int, device="cpu") -> list[Data]:
+def generate_five_nodes_dataset(n: int, device="cpu") -> list[Data]:
     # Index 0 is our root, 1 and 2 are our two nodes on the sides, 3 and 4 are on the sides of 1 and 2
     edge_index = torch.tensor(
         [[1, 2, 3, 4], [0, 0, 1, 2]], dtype=torch.long, device=device
