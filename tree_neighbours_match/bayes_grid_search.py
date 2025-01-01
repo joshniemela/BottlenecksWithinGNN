@@ -1,6 +1,5 @@
 from functools import partial
 from itertools import product
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from bayes_opt import BayesianOptimization
 
 
@@ -32,7 +31,7 @@ def run_bayes_search(
         f=partial(objective, **partial_params),
         pbounds=p_bounds,
         random_state=random_state,
-        verbose=False,
+        verbose=2,
     )
     bo.maximize(init_points=n_random_iters, n_iter=n_bayes_iters)
     max_bayes = bo.max
@@ -50,19 +49,12 @@ class BayesGridSearch:
         self.n_random_iters = n_random_iters
         self.n_bayes_iters = n_bayes_iters
 
-    def run(self, objective, max_workers=8):
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(
-                    run_bayes_search,
-                    objective=objective,
-                    partial_params=partial_params,
-                    p_bounds=self.p_bounds,
-                    n_random_iters=self.n_random_iters,
-                    n_bayes_iters=self.n_bayes_iters,
-                )
-                for partial_params in self.grid_combinations
-            ]
-
-            for future in as_completed(futures):
-                yield future.result()
+    def run(self, objective):
+        for partial_params in self.grid_combinations:
+            yield run_bayes_search(
+                objective=objective,
+                partial_params=partial_params,
+                p_bounds=self.p_bounds,
+                n_random_iters=self.n_random_iters,
+                n_bayes_iters=self.n_bayes_iters,
+            )
