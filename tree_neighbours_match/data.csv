@@ -1,4 +1,4 @@
-"Name","max_train_accuracy","fully_adjacent_last_layer","tree_depth","epoch"
+"Name","score","use_fully_adj","tree_depth","epoch"
 "radiant-sweep-357","1","false","2","6"
 "kind-sweep-976","1","false","2","7"
 "azure-sweep-979","1","false","2","7"
