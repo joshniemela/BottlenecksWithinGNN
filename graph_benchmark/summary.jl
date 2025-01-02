@@ -28,7 +28,7 @@ function plot_score_distribution(df, n=1, λ=0.003)
     p=plot()  # Initialize the plot
 
     density!(w_no_adj.score, label="Base", color=:red, alpha=0.5, bandwidth=λ)
-    density!(w_adj.score, label="w. FA", color=:blue, alpha=0.5, bandwidth=λ)
+    density!(w_adj.score, label="HubGCN", color=:blue, alpha=0.5, bandwidth=λ)
 
     # Plot observed data as scatter on the bottom
     y_w_adj = repeat([0], nrow(w_adj))
@@ -61,7 +61,7 @@ function plot_score_qq_by_hidden_layers(df)
     w_adj = df[(df."use_fully_adj" .== 1), :]
 
     xlabel!("Base")
-    ylabel!("FA")
+    ylabel!("HubGCN")
 
     min_xy = quantile(df.score, min_q) - 0.002
     max_xy = maximum(df.score)
