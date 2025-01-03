@@ -34,7 +34,9 @@ def train_eval_model(
         eval_loader (DataLoader): The data loader for evaluation data.
         config (dict): A dictionary containing configuration parameters.
     Returns:
-        None
+        nn.Module: The best model based on train accuracy.
+        float: The best train accuracy.
+        float: The eval accuracy.
     """
 
     # Loss and optimizer
@@ -48,7 +50,7 @@ def train_eval_model(
         patience=config["scheduler_patience"],
     )
 
-    max_epochs = config["epochs"]
+    max_epochs = config["max_epochs"]
     early_stop_patience = config["early_stop_patience"]
     early_stop_grace_period = config["early_stop_grace_period"]
     stopping_threshold = config["stopping_threshold"]
@@ -58,6 +60,7 @@ def train_eval_model(
     # Some variables to keep track of the best model
     # for the purpose of early stopping
     best_train_acc = 0.0
+    best_model = None
     epochs_no_improve = 0
 
     # Code takes inspiration from https://github.com/tech-srl/bottleneck
@@ -112,6 +115,7 @@ def train_eval_model(
 
         if train_acc > best_train_acc + stopping_threshold:
             best_train_acc = train_acc
+            best_model = model
             epochs_no_improve = 0
         else:
             epochs_no_improve += 1
@@ -120,6 +124,8 @@ def train_eval_model(
             epochs_no_improve >= early_stop_patience and epoch > early_stop_grace_period
         ) or train_acc == 1.0:
             break
+
+    return best_model, best_train_acc, eval_acc
 
 
 # Wrapper function for wandb integration and sweep

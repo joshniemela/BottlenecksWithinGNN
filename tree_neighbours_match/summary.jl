@@ -3,8 +3,6 @@ using DataFrames
 using Plots; gr(markerstrokewidth=0)
 using Plots.PlotMeasures
 using StatsPlots
-using Distributions
-using HypothesisTests
 
 results_folder = "."
 
@@ -98,6 +96,9 @@ function plot_score_line_by_tree_depth(df)
     # Add lines to the plot
     plot!(depths, max_scores_baseline, label="Base", lw=2, marker=:circle, color=:blue)
     plot!(depths, max_scores_fa, label="Last-FA", lw=2, marker=:square, color=:red)
+
+    max_scores_mlp = [1.0, 1.0, 0.997, 0.3908]
+    plot!(depths, max_scores_mlp, label="MLP-agg", lw=2, marker=:square, color=:green)
 
     xlabel!("Tree Depth")
     ylabel!("Max Accuracy")
