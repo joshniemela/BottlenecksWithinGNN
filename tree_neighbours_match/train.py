@@ -6,6 +6,7 @@ Functions:
 - train_eval_gcn_with_wandb: Wrapper function for wandb integration and sweep.
 """
 
+import argparse
 import dataset as ds
 from models import GCN, GGNN, GIN, GAT
 import torch
@@ -188,5 +189,52 @@ def train_eval_gcn_with_wandb():
 model_dict = {"GAT": GAT, "GCN": GCN, "GGNN": GGNN, "GIN": GIN}
 
 
-if __name__ == "__main__":
+def main(config_path=None):
+    """
+    Entry point for the script. Loads configuration and starts training.
+    Args:
+        config_path (str): Path to the configuration JSON file.
+    Returns:
+        None
+    """
+    # Load configuration
+    if config_path:
+        with open(config_path, "r") as f:
+            config = json.load(f)
+    else:
+        # Default configuration
+        config = {
+            "model_type": "GCN",
+            "tree_depth": 2,
+            "num_trees": 10,
+            "hidden_dim": 32,
+            "batch_size": 2048,
+            "epochs": 5000,
+            "lr": 0.01,
+            "fully_adjacent_last_layer": False,
+            "early_stop_patience": 25,
+            "early_stop_grace_period": 100,
+            "stopping_threshold": 0.0001,
+            "scheduler_factor": 0.9,
+            "scheduler_patience": 20,
+        }
+
+    # Initialize wandb configuration
+    wandb.init(config=config)
+    wandb.config.update(config)
+
+    # Start training
     train_eval_gcn_with_wandb()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train and evaluate a GCN model.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to the configuration JSON file (optional).",
+    )
+    args = parser.parse_args()
+
+    main(config_path=args.config)
