@@ -418,7 +418,7 @@ Under-reaching is a rather intuitive bottleneck, in such a way that we don't rea
 
 Out of time constraints we have not made an analytical solution before running the algorithm, which means our testing hypothesis is not super well defined, or isolated. It is our belief that the observed bottleneck is under-reaching, and in fact we analytically show that it is present, but we do not show that it is the only bottleneck present and the only bottleneck alleviated in the two testing cases. By adding an additional layer, we change several factors, crucially including the parameter count.
 
-= Over-squashing & Over-smoothing bottlenecks
+= Over-squashing & over-smoothing bottlenecks
 
 Two often cited issue in the literature are over-squashing and over-smoothing 
 
@@ -438,7 +438,9 @@ Over-squashing seems to be a related issue @giraldo_trade-off_2023, but which is
 
 Although @over-smoothing-metric gives us the opportunity to measure over-smoothing, it doesn't by itself tell us much about why it exists. Some literature suggests that over-smoothing is actually the result of the of "running out" of new nodes to pass to any particular node, or rather that the proportion of the absolute number of new nodes to already seen nodes in a given message disproportionate even at lower layer counts @wu2023nonasymptoticanalysisoversmoothinggraph[p.5]. 
 
-We propose that over-smoothing is actually caused or extenuated by duplicate messages in the message passing process which is asymptotically more significant than the raw number of nodes introduced in a message pass. In a given simple graph $overset(circle,arrow.turn.b) <- overset(circle,arrow.turn.b) <- overset(circle,arrow.turn.b)$, we notice that the information in the 2nd node is passed to the 1st node in the first round of message passing. At the next layer the message received by the 1st node will contain information from node 2 and 3, since node 3 sent information to node 2 in the first layer, which is now being propagated further. But each node is not given the same significance in node 1. In fact there is a bias induced by the fact that the information in node 1 has more paths coming from node 2 on layer 2 than to node 3. Hence the message in node 2 is "duplicated" and fed to node 1 in the message passing process. In this case this might be a desirable effect as intuitively we might intend for the information in node 2 to be more relevant to node 1 than node 3 is. But this effect is least pronounced in a graphs where nodes degree is uniform such as in our toy example, and actually gets significantly more intrusive in natural graphs with highly connected nodes.
+We propose that over-smoothing is actually caused or extenuated by duplicate messages in the message passing process which is asymptotically more significant than the raw number of nodes introduced in a message pass. In a given simple graph $overset(circle,arrow.turn.b) <- overset(circle,arrow.turn.b) <- overset(circle,arrow.turn.b)$, we notice that the information in the 2nd node is passed to the 1st node in the first round of message passing. 
+At the next layer the message received by the 1st node will contain information from node 2 and 3, since node 3 sent information to node 2 in the first layer, which is now being propagated further. But each node is not given the same significance in node 1. In fact there is a bias induced by the fact that the information in node 1 has more paths coming from node 2 on layer 2 than to node 3. Hence the message in node 2 is "duplicated" and fed to node 1 in the message passing process. In this case this might be a desirable effect as intuitively we might intend for the information in node 2 to be more relevant to node 1 than node 3 is. 
+But this effect is least pronounced in a graphs where nodes degree is uniform such as in our toy example, and actually gets significantly more intrusive in natural graphs with highly connected nodes.
 
 Before we introduce the theory behind our suggestion, we will present an empirical result which hopefully gives an intuition behind our motivation for this approach. In @nodegrowthfig we see that in normal graphs there is often a growth phase early on, where the number of new nodes at each layer is growing very fast and makes up a significant portion of the nodes in the message passing round. This runs contrary to the suggestion in @wu2023nonasymptoticanalysisoversmoothinggraph which states that over-smoothing is can be explained as shallow depths by the proportionally small amount of new nodes for de-noising.
 
@@ -487,9 +489,6 @@ In @coralayer1to5nodepathsloga and @coralayer6nodepaths look at what this means 
 
 This phenomena is even more accentuated by more connected graphs such as PubMed.
 
-
-// page 5 of https://arxiv.org/pdf/2303.10993 gradient gating seems intersting. Can we employ it in the tree neighbours experiemnt to isolate the over-squasing effect?
-
 // report on how we may measure the alledged factors which cause these two bottlenecks
 
 // report on how prevelant they actual are, both in general and in relation to each other.
@@ -497,14 +496,6 @@ This phenomena is even more accentuated by more connected graphs such as PubMed.
 
 
 = "Tree neighbors-match"
-// TODO: IS THIS NECCESARY TO KEEP
-// Our tree neighbours using the approximation for birthday problem has almost 0 likelihood for collisions between test and train
-// For each given depth \(d\), we have \(2^{d}! \cdot 2^{d}\) (\(2^{d}!\) permutations of the bottom layer, \(2^{d}\) possible root labels) possible trees / samples. We notice this means that for \(d=2\) and \(d=3\), we only get \(96\) and \(322560\) unique trees respectively.
-// We sample from this dataset by generating a binary tree, then creating a permutation of the unique number of leaves and then randomly picking a class that the root should mimic.
-// By the birthday paradox, we know this means these depths will very likely contain duplicate entries in the train and test data. Since they are both sampled IID this means it will not result in overfitting. In the event that the model has perfectly learnt the training data which contains all possible unique entries, we know that any future samples we throw at the model will also just contain the same entries we can classify.
-// For depths greater then 3, the number of unique trees grows to the point where the likelihood of duplicate entries goes towards 0.
-
-// TODO: mention that they also came up with the concept of oversquashign and that this should be a naive trivial solution that works
 In the paper by Alon et al. (2021) @alon_bottleneck_2021, the authors investigate the impact of modifying the last layer of Graph Convolutional Networks (GCNs). More concretely, they implement a "Fully adjacent last layer", meaning that all nodes in the last layer are connected so that any node can send a message to any other node without any intermediate hops. This modification is posited to alleviate the over-squashing that might be present in our GCN model. This over-squashing affects the model's ability to capture global information from the graph, thereby reducing the performance on various tasks such as node classification and link prediction. The authors provide empirical evidence demonstrating that this architectural change consistently leads to better results across different datasets and benchmarks. As part of this study, they construct a graph dataset, "Tree Neighbors-Match", in which they claim to demonstrate the issue of over squashing. In this section, we aim to replicate their findings to validate their practical demonstration of over-squashing and the effectiveness of the fully adjacent last layer in GCNs.
 
 == The dataset
@@ -864,8 +855,7 @@ This doesn't tackle the problem regarding inference reproducibility, which we al
 A low hanging fruit, which we believe everyone in the field should be doing, is reporting the model weights alongside a published paper. If you have the resources to train on dozens of GPUs with terabytes of data, then it is reasonable to assume that the model weights can be stored somewhere accessible to other researchers.
 Having access to the model weights, reduces the time required to evaluate a model (for instance if you need to get some unreported metrics or to compare on some other data) dramatically. It also removes any doubt that a reproduction of the inference or learning algorithm is implemented incorrectly.
 We (and other researchers) encountered several times authors claiming state of the art performance using some novel approach, which we failed to reproduce. Since there are too many degrees of freedom in how the model can be implemented, trained and evaluated, the reproductions are inconclusive instead of being an unambiguous process of importing weights, and evaluating the model.
-
-
+Publishing the model weights alongside the paper and code also tackles the problem of reproducing similar results with different data but the same implementation. It is then possible for authors to quantitatively compare models from several unrelated papers that may or may not be using different metrics, some use unbiased losses, some use biased losses, some might use an entirely different metric and some might be using various aggregations of these metrics.
 
 == Dependency hell and reproducibility woes in Python
 Python has notoriously bad package management, and the common workflow in an academic machine learning setting, often includes the usage of either a global installation, virtual environments, or notebooks such as Jupyter or Google Colab. 
@@ -886,25 +876,23 @@ version of NumPy (there has since been made breaking changes to NumPy's API), Te
 in the same experiment. There are also very few comments in the repository.
 Without the high level implementation details, it is quite difficult to reproduce the results or assess the correctness of the original implementation.
 
-// TODO MUSTAFA: pls write your legendary saga of trying to get TOGL to work with the original code
-
 Outdated dependencies / breaking changes
 Dead dependencies / Missing dependencies
 No documentation or poor documentation
 
 
 == Orthogonality and hyper-parameter search <ml-reproducibility>
-To make our experiments more reproducible, we took inspiration from Andrew Ng and his concept of orthogonalisation. The idea is to isolate the various tunable hyper-parameters so that the hyper-parameters become easier to interpret and to optimise.
+To make our experiments more reproducible, we took inspiration from Andrew Ng @AndrewNg and the concept of orthogonalisation. The idea is to isolate the various tunable hyper-parameters so that the hyper-parameters become easier to interpret and to optimise.
 
-This in theory makes it possible to optimise for better models, but in our case we are interested in the orthogonality because of interpretability and the potential improvements to reproducibility. 
+This in theory makes it possible to optimise for better models, but in our case we are interested in 
+orthogonality because of interpretability and the potential improvements to reproducibility. 
 
-In machine learning, we seek to minimise the bias and variance of a given model applied to some data. In most cases, we will be tuning some hyper-parameter that positively affects the bias and negatively affects the variance or vice versa.
+In machine learning, we seek to minimise the bias and variance of a given model applied to some data. 
+In most cases, we will be tuning some hyper-parameter that positively affects the bias and negatively affects the variance or vice versa.
 This can be further broken down to various steps:
 1. Train the model to perform well on the training data.
 2. Evaluate the model and perform model selection optimising on validation data.
 3. Evaluate the model on test and ensure the test metrics are aligned with actual performance on "real" data.
-
-//This can be broken down to two separate problems, minimising how much the model overfits, and minimising the objective function (typically loss). 
 
 To address model performance on training data, we can improve the size of the dataset, or improve the model either by making it more well-suited to the data or by increasing complexity.
 After this, we might choose to select the best performing model either given various configurations of hyperparameters or various architectures. 
@@ -912,49 +900,34 @@ At this step, we might also choose to use regularisation to restrict the model a
 
 This leads into our motivation for using Bayesian optimisation in place of early-stopping in the latter half of the paper. Early-stopping is a popular choice in machine learning where the model trains until it stops improving, then the best model observed is selected.
 This has the effect of improving performance on the train data by changing the number of epochs as well as improving the performance on the validation data by alleviating overfitting. This affects multiple phases of the training process at once. 
-We therefore suggest tuning the number of epochs as a hyperparameter alongside some method of model regularisation such as L2.
-Another potential problem is performing a grid search for hyperparameters, these are often done with arbitrarily chosen values and they have no guarantees on good coverage of the parameter space. We therefore also use Bayesian optimisation as it allows us to specify a more broad and less arbitrary range of infinitely many values that could be selected.  
+We therefore suggest tuning the number of epochs as a hyperparameter alongside some method of model regularisation such as L2 or dropout (Wager et al. @wager2013dropouttrainingadaptiveregularization show that dropout is equivalent to L2 loss).
+
+Another potential problem is performing a grid search for hyperparameters, these are often done with arbitrarily chosen values and they have no guarantees on good coverage of the parameter space. We therefore also use Bayesian optimisation as it allows us to specify a more broad range of infinitely many values that could be selected, leading to better coverage of the hyperparameter space.
 
 Bayesian optimisation itself also has some parameters that need to either be chosen ahead of time, or by optimisation. In our experiments, we used the default settings of the BayesianOptimisation package in Python. 
-Selecting a different acquisition function or kernel can yield different results. Model evaluations are often quite noisy, and will potentially require an adjustment to the level of noise expected by the chosen kernel. Alternatively multiple observations could be done for a given set of hyperparameters, but this is significantly more expensive from a computational point of view. 
-// TODO: might need to elaborate why
-We chose not to optimise the parameters of our search. 
-
-
-// TODO:
-// L2, dropout and early stopping are equivalent, find source to why
-
-// chain of assumptions (andrew ng)
-// Fit on train and perform well
-// Fit on dev and perform well
-// Fit on test and perform well
-// This implies that it performs well in the real world (generalises)
-// https://thevivekpandey.github.io/posts/2017-10-22-deeplearning-coursera-course-3.html
-// https://cs230.stanford.edu/files/C3M1.pdf
+Selecting a different acquisition function or kernel can yield different results. Model evaluations are often quite noisy, and will require an adjustment to the level of noise (in our case, the $nu$ parameter for the Matern kernel we chose to use in our gaussian process). Alternatively multiple observations could be done for a given set of hyperparameters to reduce the variance, but this is significantly more expensive from a computational point of view. 
+We chose not to optimise the parameters of our hyperparameter search.
 
 == Metrics and reporting of results
-Most papers (source) report the results as either the best result or the average across
-multiple runs with a standard deviation. These two summary statistics in isolation are
+Common practice is to report the results as either the best result and/or the average across
+multiple runs with a standard deviation. We argue that these summary statistics in isolation are
 not as informative as plots on the different distributions of models.
 
 We therefore suggest plot types such as kernel density, Q-Q or candlestick plots.
 Typically, we are interested in producing the model that maximises some performance metric as a result of some training and selection process.
-Equivalently, this is the maximum value drawn from some sample of model evaluations.
-But there is a catch, the maximum of a sample of models from some distribution is a statistically meaningless number which cannot be compared to other distributions.
-It tells us virtually nothing about the distribution other than the maximum value existing in the support.
+Equivalently, this is the maximum value drawn from some sample of model evaluations. The maximum of a sample of models from some distribution is quite difficult to compare to other distributions.
+Virtually nothing about the distribution can be explained by the maximum value other than the maximum value existing in the support of the distribution.
 
-The average is more meaningful but doesn't help us with comparing two distributions if we are looking for the distribution that gives us the best performing models overall. It is only helpful if we know the distributions exhibit similar behaviour (for instance, if they are both gaussian with equal variance).
+The average is more meaningful but doesn't help us with comparing two distributions if we are looking for the distribution that gives us the best performing models overall. It is only helpful if we know the distributions exhibit similar behaviour (for instance, if they are both gaussian with equal variance) and that the average is correlated with the tails.
 
-It is also important to ensure that the estimates are statistically significant and have a low uncertainty, this could be by sampling more data until the standard error is at an acceptable level. 
+// TODO: move
+// It is also important to ensure that the estimates are statistically significant and have a low uncertainty, this could be by sampling more data until the standard error is at an acceptable level. 
 Without these constraints on the distributions, a distribution with a lower average might still have a tail that contains better models.
 
-Going back to inference reproducibility, we also note another important benefit of reporting the model weights alongside the paper and code. Publishing the weights also makes it possible for authors to quantitatively compare models from several unrelated papers that may or may not be using different metrics, some use unbiased losses, some use losses, some might use an entirely different metric and some might be using various aggregations of these metrics.
 
 
-// TODO: ANOTHER NOTE (yes again shhh): what about cross validation we dont mention that
 
-// They done done it Don, then they did damn did it didnt they?
-
+// appendix counter
 #counter(heading).update(0)
 #set heading(numbering: "A.1", supplement: [Appendix])
 #show heading: it => {
